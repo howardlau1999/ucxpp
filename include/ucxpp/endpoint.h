@@ -24,14 +24,31 @@ class endpoint : public noncopyable,
   ucp_ep_h ep_;
 
 public:
-  class tag_send_awaitable {
+  class stream_send_awaitable {
+    ucs_status_t status_;
+    std::shared_ptr<endpoint> endpoint_;
+    void const *buffer_;
+    size_t length_;
+    std::coroutine_handle<> h_;
+
   public:
+    stream_send_awaitable(std::shared_ptr<endpoint> endpoint,
+                          void const *buffer, size_t length);
+    static void send_cb(void *request, ucs_status_t status, void *user_data);
+    bool await_ready() noexcept;
+    bool await_suspend(std::coroutine_handle<> h);
+    void await_resume();
+  };
+
+  class tag_send_awaitable {
     ucs_status_t status_;
     std::shared_ptr<endpoint> endpoint_;
     void const *buffer_;
     size_t length_;
     ucp_tag_t tag_;
     std::coroutine_handle<> h_;
+
+  public:
     tag_send_awaitable(std::shared_ptr<endpoint> endpoint, void const *buffer,
                        size_t length, ucp_tag_t tag);
     static void send_cb(void *request, ucs_status_t status, void *user_data);
@@ -62,6 +79,8 @@ public:
   static task<std::shared_ptr<endpoint>>
   from_tcp_connection(socket::tcp_connection &conncetion,
                       std::shared_ptr<worker> worker);
+  stream_send_awaitable stream_send(void const *buffer, size_t length,
+                                    ucp_tag_t tag);
   tag_send_awaitable tag_send(void const *buffer, size_t length, ucp_tag_t tag);
   tag_recv_awaitable tag_recv(void *buffer, size_t length, ucp_tag_t tag,
                               ucp_tag_t tag_mask = 0xFFFFFFFF);
