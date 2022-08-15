@@ -40,6 +40,24 @@ public:
     void await_resume();
   };
 
+  class stream_recv_awaitable {
+    ucs_status_t status_;
+    std::shared_ptr<endpoint> endpoint_;
+    void *buffer_;
+    size_t length_;
+    size_t received_;
+    std::coroutine_handle<> h_;
+
+  public:
+    stream_recv_awaitable(std::shared_ptr<endpoint> endpoint, void *buffer,
+                          size_t length);
+    static void recv_cb(void *request, ucs_status_t status,
+                        ucp_tag_recv_info_t const *tag_info, void *user_data);
+    bool await_ready() noexcept;
+    bool await_suspend(std::coroutine_handle<> h);
+    size_t await_resume();
+  };
+
   class tag_send_awaitable {
     ucs_status_t status_;
     std::shared_ptr<endpoint> endpoint_;

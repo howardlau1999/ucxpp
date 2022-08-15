@@ -1,5 +1,6 @@
 #include "ucxpp/endpoint.h"
 
+#include <cstddef>
 #include <memory>
 #include <vector>
 
@@ -91,7 +92,38 @@ bool endpoint::stream_send_awaitable::await_suspend(std::coroutine_handle<> h) {
 }
 
 void endpoint::stream_send_awaitable::await_resume() {
-  check_ucs_status(status_, "error in ucp_send_nb");
+  check_ucs_status(status_, "error in ucp_stream_send_nb");
+}
+
+endpoint::stream_recv_awaitable::stream_recv_awaitable(
+    std::shared_ptr<endpoint> endpoint, void *buffer, size_t length)
+    : endpoint_(endpoint), buffer_(buffer), length_(length), received_(0) {}
+
+void endpoint::stream_recv_awaitable::recv_cb(
+    void *request, ucs_status_t status, ucp_tag_recv_info_t const *tag_info,
+    void *user_data) {}
+
+bool endpoint::stream_recv_awaitable::await_ready() noexcept { return false; }
+
+bool endpoint::stream_recv_awaitable::await_suspend(std::coroutine_handle<> h) {
+  h_ = h;
+  ucp_request_param_t recv_param;
+  recv_param.op_attr_mask =
+      UCP_OP_ATTR_FIELD_CALLBACK | UCP_OP_ATTR_FIELD_USER_DATA;
+  recv_param.cb.recv = &recv_cb;
+  recv_param.user_data = this;
+  auto request = ::ucp_stream_recv_nbx(endpoint_->ep_, buffer_, length_,
+                                       &received_, &recv_param);
+  if (UCS_PTR_IS_ERR(request)) {
+    status_ = UCS_PTR_STATUS(request);
+    return false;
+  }
+  return UCS_PTR_IS_PTR(request);
+}
+
+size_t endpoint::stream_recv_awaitable::await_resume() {
+  check_ucs_status(status_, "error in ucp_stream_recv_nbx");
+  return received_;
 }
 
 endpoint::tag_send_awaitable::tag_send_awaitable(
