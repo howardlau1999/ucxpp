@@ -7,7 +7,7 @@ find_package(Threads REQUIRED)
 
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
-endif()
+endif ()
 
 string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_LENGTH)
 add_definitions("-DSOURCE_PATH_LENGTH=${SOURCE_PATH_LENGTH}")
@@ -27,6 +27,21 @@ set(UCXPP_SOURCE_FILES
 
 add_library(ucxpp STATIC ${UCXPP_SOURCE_FILES})
 target_link_libraries(ucxpp ucp ucs uct Threads::Threads)
+
+if (CMAKE_CXX_COMPILER_ID MATCHES Clang)
+  target_compile_options(ucxpp
+    PUBLIC
+    -stdlib=libc++
+    -fcoroutines-ts
+  )
+elseif (CMAKE_CXX_COMPILER_ID MATCHES GNU)
+  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "11") 
+    target_compile_options(ucxpp
+      PUBLIC
+      -fcoroutines
+    )
+  endif ()
+endif ()
 
 include(GNUInstallDirs)
 install(TARGETS ucxpp EXPORT ucxpp ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
