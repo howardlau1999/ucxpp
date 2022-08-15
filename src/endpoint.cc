@@ -99,9 +99,16 @@ endpoint::stream_recv_awaitable::stream_recv_awaitable(
     std::shared_ptr<endpoint> endpoint, void *buffer, size_t length)
     : endpoint_(endpoint), buffer_(buffer), length_(length), received_(0) {}
 
-void endpoint::stream_recv_awaitable::recv_cb(
-    void *request, ucs_status_t status, ucp_tag_recv_info_t const *tag_info,
-    void *user_data) {}
+void endpoint::stream_recv_awaitable::recv_cb(void *request,
+                                              ucs_status_t status,
+                                              size_t received,
+                                              void *user_data) {
+  auto self = reinterpret_cast<stream_recv_awaitable *>(user_data);
+  self->status_ = status;
+  self->received_ = received;
+  ::ucp_request_free(request);
+  self->h_.resume();
+}
 
 bool endpoint::stream_recv_awaitable::await_ready() noexcept { return false; }
 
@@ -110,7 +117,7 @@ bool endpoint::stream_recv_awaitable::await_suspend(std::coroutine_handle<> h) {
   ucp_request_param_t recv_param;
   recv_param.op_attr_mask =
       UCP_OP_ATTR_FIELD_CALLBACK | UCP_OP_ATTR_FIELD_USER_DATA;
-  recv_param.cb.recv = &recv_cb;
+  recv_param.cb.recv_stream = &recv_cb;
   recv_param.user_data = this;
   auto request = ::ucp_stream_recv_nbx(endpoint_->ep_, buffer_, length_,
                                        &received_, &recv_param);

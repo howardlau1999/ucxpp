@@ -51,8 +51,8 @@ public:
   public:
     stream_recv_awaitable(std::shared_ptr<endpoint> endpoint, void *buffer,
                           size_t length);
-    static void recv_cb(void *request, ucs_status_t status,
-                        ucp_tag_recv_info_t const *tag_info, void *user_data);
+    static void recv_cb(void *request, ucs_status_t status, size_t length,
+                        void *user_data);
     bool await_ready() noexcept;
     bool await_suspend(std::coroutine_handle<> h);
     size_t await_resume();
