@@ -52,6 +52,18 @@ endpoint::from_tcp_connection(socket::tcp_connection &conncetion,
   co_return std::make_shared<endpoint>(worker, remote_addr);
 }
 
+endpoint::tag_send_awaitable endpoint::tag_send(void const *buffer,
+                                                size_t length, ucp_tag_t tag) {
+  return tag_send_awaitable(this->shared_from_this(), buffer, length, tag);
+}
+
+endpoint::tag_recv_awaitable endpoint::tag_recv(void *buffer, size_t length,
+                                                ucp_tag_t tag,
+                                                ucp_tag_t tag_mask) {
+  return tag_recv_awaitable(this->shared_from_this(), buffer, length, tag,
+                            tag_mask);
+}
+
 endpoint::tag_recv_awaitable::tag_recv_awaitable(
     std::shared_ptr<endpoint> endpoint, void *buffer, size_t length,
     ucp_tag_t tag, ucp_tag_t tag_mask)
@@ -90,7 +102,7 @@ void endpoint::tag_recv_awaitable::await_resume() {
 }
 
 endpoint::tag_send_awaitable::tag_send_awaitable(
-    std::shared_ptr<endpoint> endpoint, void *buffer, size_t length,
+    std::shared_ptr<endpoint> endpoint, void const *buffer, size_t length,
     ucp_tag_t tag)
     : endpoint_(endpoint), buffer_(buffer), length_(length), tag_(tag) {}
 

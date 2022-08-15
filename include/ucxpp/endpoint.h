@@ -28,11 +28,11 @@ public:
   public:
     ucs_status_t status_;
     std::shared_ptr<endpoint> endpoint_;
-    void *buffer_;
+    void const *buffer_;
     size_t length_;
     ucp_tag_t tag_;
     std::coroutine_handle<> h_;
-    tag_send_awaitable(std::shared_ptr<endpoint> endpoint, void *buffer,
+    tag_send_awaitable(std::shared_ptr<endpoint> endpoint, void const *buffer,
                        size_t length, ucp_tag_t tag);
     static void send_cb(void *request, ucs_status_t status, void *user_data);
     bool await_ready() noexcept;
@@ -63,6 +63,8 @@ public:
   from_tcp_connection(socket::tcp_connection &conncetion,
                       std::shared_ptr<worker> worker);
   tag_send_awaitable tag_send(void const *buffer, size_t length, ucp_tag_t tag);
+  tag_recv_awaitable tag_recv(void *buffer, size_t length, ucp_tag_t tag,
+                              ucp_tag_t tag_mask = 0xFFFFFFFF);
   ~endpoint();
 };
 
