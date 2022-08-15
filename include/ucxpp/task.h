@@ -86,10 +86,8 @@ template <class T> struct task {
   }
   ~task() {
     if (!detached_) {
-      RDMAPP_LOG_TRACE("waiting coroutine %p", h_.address());
       get_future().wait();
       h_.destroy();
-      RDMAPP_LOG_TRACE("destroyed coroutine %p", h_.address());
     }
   }
   task(task &&) = default;

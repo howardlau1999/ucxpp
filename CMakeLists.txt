@@ -21,6 +21,8 @@ set(UCXPP_SOURCE_FILES
   src/socket/tcp_listener.cc
   src/context.cc
   src/worker.cc
+  src/endpoint.cc
+  src/address.cc
 )
 
 add_library(ucxpp STATIC ${UCXPP_SOURCE_FILES})

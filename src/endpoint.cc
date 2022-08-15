@@ -36,7 +36,8 @@ endpoint::from_tcp_connection(socket::tcp_connection &conncetion,
     address_length_read += n;
   }
   size_t address_length;
-  detail::deserialize(address_length_buffer, address_length);
+  detail::deserialize(reinterpret_cast<char *&>(address_length_buffer),
+                      address_length);
   std::vector<char> address_buffer(address_length);
   int address_read = 0;
   while (address_read < address_length) {
