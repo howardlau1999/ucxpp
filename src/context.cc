@@ -16,7 +16,8 @@ context::context(bool print_config) {
                    "failed to read ucp config");
   ucp_params_t ucp_params;
   ucp_params.field_mask = UCP_PARAM_FIELD_FEATURES;
-  ucp_params.features = UCP_FEATURE_TAG | UCP_FEATURE_WAKEUP;
+  ucp_params.features =
+      UCP_FEATURE_TAG | UCP_FEATURE_WAKEUP | UCP_FEATURE_STREAM;
   check_ucs_status(::ucp_init(&ucp_params, config, &context_),
                    "failed to init ucp");
   if (print_config) {

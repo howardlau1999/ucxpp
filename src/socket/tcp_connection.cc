@@ -4,6 +4,7 @@
 #include <memory>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <unistd.h>
 
 #include "ucxpp/error.h"
 #include "ucxpp/socket/channel.h"

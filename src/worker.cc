@@ -27,6 +27,12 @@ local_address worker::get_address() {
   return ucxpp::local_address(shared_from_this(), address, address_length);
 }
 
+bool worker::progress() { return ::ucp_worker_progress(worker_); }
+
+void worker::wait() {
+  check_ucs_status(::ucp_worker_wait(worker_), "failed to wait worker");
+}
+
 worker::~worker() { ::ucp_worker_destroy(worker_); }
 
 } // namespace ucxpp
