@@ -109,3 +109,7 @@ public:
 };
 
 } // namespace ucxpp
+
+/** \example helloworld.cc
+ * This is an example of how to use the endpoint class.
+ */
