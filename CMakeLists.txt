@@ -12,6 +12,8 @@ endif ()
 string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_LENGTH)
 add_definitions("-DSOURCE_PATH_LENGTH=${SOURCE_PATH_LENGTH}")
 
+option(UCXPP_BUILD_EXAMPLES "Build examples" ON)
+
 include_directories(include)
 
 set(UCXPP_SOURCE_FILES
@@ -19,6 +21,8 @@ set(UCXPP_SOURCE_FILES
   src/socket/event_loop.cc
   src/socket/tcp_connection.cc
   src/socket/tcp_listener.cc
+  src/acceptor.cc
+  src/connector.cc
   src/context.cc
   src/worker.cc
   src/endpoint.cc
@@ -41,6 +45,14 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES GNU)
       -fcoroutines
     )
   endif ()
+endif ()
+
+set(UCXPP_EXAMPLES helloworld)
+if (UCXPP_BUILD_EXAMPLES)
+  foreach (EXAMPLE ${UCXPP_EXAMPLES})
+    add_executable(${EXAMPLE} examples/${EXAMPLE}.cc)
+    target_link_libraries(${EXAMPLE} ucxpp) 
+  endforeach ()
 endif ()
 
 include(GNUInstallDirs)

@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include <ucp/api/ucp.h>
@@ -9,6 +10,7 @@
 #include "ucxpp/address.h"
 #include "ucxpp/error.h"
 
+#include "ucxpp/detail/debug.h"
 #include "ucxpp/detail/serdes.h"
 
 namespace ucxpp {
@@ -37,8 +39,8 @@ endpoint::from_tcp_connection(socket::tcp_connection &conncetion,
     address_length_read += n;
   }
   size_t address_length;
-  detail::deserialize(reinterpret_cast<char *&>(address_length_buffer),
-                      address_length);
+  char *p = address_length_buffer;
+  detail::deserialize(p, address_length);
   std::vector<char> address_buffer(address_length);
   int address_read = 0;
   while (address_read < address_length) {
@@ -51,6 +53,18 @@ endpoint::from_tcp_connection(socket::tcp_connection &conncetion,
   }
   auto remote_addr = remote_address(std::move(address_buffer));
   co_return std::make_shared<endpoint>(worker, remote_addr);
+}
+
+void endpoint::print() { ::ucp_ep_print_info(ep_, stdout); }
+
+endpoint::stream_send_awaitable endpoint::stream_send(void const *buffer,
+                                                      size_t length) {
+  return stream_send_awaitable(this->shared_from_this(), buffer, length);
+}
+
+endpoint::stream_recv_awaitable endpoint::stream_recv(void *buffer,
+                                                      size_t length) {
+  return stream_recv_awaitable(this->shared_from_this(), buffer, length);
 }
 
 endpoint::tag_send_awaitable endpoint::tag_send(void const *buffer,
@@ -179,6 +193,8 @@ void endpoint::tag_recv_awaitable::recv_cb(void *request, ucs_status_t status,
                                            void *user_data) {
   auto self = reinterpret_cast<tag_recv_awaitable *>(user_data);
   self->status_ = status;
+  self->recv_info_.length = tag_info->length;
+  self->recv_info_.sender_tag = tag_info->sender_tag;
   ::ucp_request_free(request);
   self->h_.resume();
 }
@@ -188,10 +204,12 @@ bool endpoint::tag_recv_awaitable::await_ready() noexcept { return false; }
 bool endpoint::tag_recv_awaitable::await_suspend(std::coroutine_handle<> h) {
   h_ = h;
   ucp_request_param_t recv_param;
-  recv_param.op_attr_mask =
-      UCP_OP_ATTR_FIELD_CALLBACK | UCP_OP_ATTR_FIELD_USER_DATA;
+  recv_param.op_attr_mask = UCP_OP_ATTR_FIELD_CALLBACK |
+                            UCP_OP_ATTR_FIELD_USER_DATA |
+                            UCP_OP_ATTR_FIELD_RECV_INFO;
   recv_param.cb.recv = &recv_cb;
   recv_param.user_data = this;
+  recv_param.recv_info.tag_info = &recv_info_;
   auto request = ::ucp_tag_recv_nbx(endpoint_->worker_->worker_, buffer_,
                                     length_, tag_, tag_mask_, &recv_param);
   if (UCS_PTR_IS_ERR(request)) {
@@ -201,9 +219,11 @@ bool endpoint::tag_recv_awaitable::await_suspend(std::coroutine_handle<> h) {
   return UCS_PTR_IS_PTR(request);
 }
 
-void endpoint::tag_recv_awaitable::await_resume() {
+std::pair<size_t, ucp_tag_t> endpoint::tag_recv_awaitable::await_resume() {
   check_ucs_status(status_, "error in ucp_tag_recv_nbx");
+  return std::make_pair(recv_info_.length, recv_info_.sender_tag);
 }
+
 endpoint::~endpoint() {
   ::ucp_ep_close_nb(ep_, ucp_ep_close_mode::UCP_EP_CLOSE_MODE_FORCE);
 }

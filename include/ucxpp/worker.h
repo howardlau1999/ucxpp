@@ -18,6 +18,8 @@ class worker : public std::enable_shared_from_this<worker> {
 public:
   worker(std::shared_ptr<context> ctx);
   local_address get_address();
+  bool progress();
+  void wait();
   ~worker();
 };
 

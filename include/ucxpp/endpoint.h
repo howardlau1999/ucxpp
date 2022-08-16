@@ -3,6 +3,7 @@
 #include <coroutine>
 #include <memory>
 #include <ucs/type/status.h>
+#include <vector>
 
 #include <ucp/api/ucp.h>
 #include <ucp/api/ucp_def.h>
@@ -80,6 +81,7 @@ public:
     std::shared_ptr<endpoint> endpoint_;
     void *buffer_;
     size_t length_;
+    ucp_tag_recv_info recv_info_;
     ucp_tag_t tag_;
     ucp_tag_t tag_mask_;
     std::coroutine_handle<> h_;
@@ -91,14 +93,15 @@ public:
                         ucp_tag_recv_info_t const *tag_info, void *user_data);
     bool await_ready() noexcept;
     bool await_suspend(std::coroutine_handle<> h);
-    void await_resume();
+    std::pair<size_t, ucp_tag_t> await_resume();
   };
   endpoint(std::shared_ptr<worker> worker, remote_address const &peer);
+  void print();
   static task<std::shared_ptr<endpoint>>
   from_tcp_connection(socket::tcp_connection &conncetion,
                       std::shared_ptr<worker> worker);
-  stream_send_awaitable stream_send(void const *buffer, size_t length,
-                                    ucp_tag_t tag);
+  stream_send_awaitable stream_send(void const *buffer, size_t length);
+  stream_recv_awaitable stream_recv(void *buffer, size_t length);
   tag_send_awaitable tag_send(void const *buffer, size_t length, ucp_tag_t tag);
   tag_recv_awaitable tag_recv(void *buffer, size_t length, ucp_tag_t tag,
                               ucp_tag_t tag_mask = 0xFFFFFFFF);
