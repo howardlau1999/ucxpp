@@ -61,6 +61,8 @@ context::context(uint64_t features, bool print_config) {
   ::ucp_config_release(config);
 }
 
+ucp_context_h context::handle() { return context_; }
+
 context::~context() { ::ucp_cleanup(context_); }
 
 } // namespace ucxpp

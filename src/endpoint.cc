@@ -24,6 +24,8 @@ endpoint::endpoint(std::shared_ptr<worker> worker, remote_address const &peer)
                    "failed to create ep");
 }
 
+std::shared_ptr<worker> endpoint::worker_ptr() { return worker_; }
+
 task<std::shared_ptr<endpoint>>
 endpoint::from_tcp_connection(socket::tcp_connection &conncetion,
                               std::shared_ptr<worker> worker) {
@@ -115,8 +117,8 @@ bool endpoint::stream_send_awaitable::await_suspend(std::coroutine_handle<> h) {
   send_param.user_data = this;
   auto request =
       ::ucp_stream_send_nbx(endpoint_->ep_, buffer_, length_, &send_param);
+  status_ = UCS_PTR_STATUS(request);
   if (UCS_PTR_IS_ERR(request)) {
-    status_ = UCS_PTR_STATUS(request);
     return false;
   }
   return UCS_PTR_IS_PTR(request);
@@ -152,8 +154,8 @@ bool endpoint::stream_recv_awaitable::await_suspend(std::coroutine_handle<> h) {
   recv_param.user_data = this;
   auto request = ::ucp_stream_recv_nbx(endpoint_->ep_, buffer_, length_,
                                        &received_, &recv_param);
+  status_ = UCS_PTR_STATUS(request);
   if (UCS_PTR_IS_ERR(request)) {
-    status_ = UCS_PTR_STATUS(request);
     return false;
   }
   return UCS_PTR_IS_PTR(request);
@@ -188,8 +190,8 @@ bool endpoint::tag_send_awaitable::await_suspend(std::coroutine_handle<> h) {
   send_param.user_data = this;
   auto request =
       ::ucp_tag_send_nbx(endpoint_->ep_, buffer_, length_, tag_, &send_param);
+  status_ = UCS_PTR_STATUS(request);
   if (UCS_PTR_IS_ERR(request)) {
-    status_ = UCS_PTR_STATUS(request);
     return false;
   }
   return UCS_PTR_IS_PTR(request);
@@ -229,8 +231,8 @@ bool endpoint::tag_recv_awaitable::await_suspend(std::coroutine_handle<> h) {
   recv_param.recv_info.tag_info = &recv_info_;
   auto request = ::ucp_tag_recv_nbx(endpoint_->worker_->worker_, buffer_,
                                     length_, tag_, tag_mask_, &recv_param);
+  status_ = UCS_PTR_STATUS(request);
   if (UCS_PTR_IS_ERR(request)) {
-    status_ = UCS_PTR_STATUS(request);
     return false;
   }
   return UCS_PTR_IS_PTR(request);
@@ -267,8 +269,8 @@ bool endpoint::rma_put_awaitable::await_suspend(std::coroutine_handle<> h) {
   auto request = ::ucp_put_nbx(endpoint_->ep_, buffer_, length_, raddr_, rkey_,
                                &send_param);
 
+  status_ = UCS_PTR_STATUS(request);
   if (UCS_PTR_IS_ERR(request)) {
-    status_ = UCS_PTR_STATUS(request);
     return false;
   }
   return UCS_PTR_IS_PTR(request);
@@ -304,8 +306,8 @@ bool endpoint::rma_get_awaitable::await_suspend(std::coroutine_handle<> h) {
   auto request = ::ucp_get_nbx(endpoint_->ep_, buffer_, length_, raddr_, rkey_,
                                &send_param);
 
+  status_ = UCS_PTR_STATUS(request);
   if (UCS_PTR_IS_ERR(request)) {
-    status_ = UCS_PTR_STATUS(request);
     return false;
   }
   return UCS_PTR_IS_PTR(request);

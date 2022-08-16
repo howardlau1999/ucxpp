@@ -37,6 +37,7 @@ public:
     builder &enable_rma();
   };
   context(uint64_t features, bool print_config);
+  ucp_context_h handle();
   ~context();
 };
 

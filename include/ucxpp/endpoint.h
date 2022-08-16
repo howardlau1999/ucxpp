@@ -137,6 +137,7 @@ public:
   };
 
   endpoint(std::shared_ptr<worker> worker, remote_address const &peer);
+  std::shared_ptr<worker> worker_ptr();
   void print();
   static task<std::shared_ptr<endpoint>>
   from_tcp_connection(socket::tcp_connection &conncetion,
