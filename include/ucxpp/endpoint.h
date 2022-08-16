@@ -22,6 +22,8 @@ namespace ucxpp {
 class endpoint : public noncopyable,
                  public std::enable_shared_from_this<endpoint> {
   friend class worker;
+  friend class local_memory_handle;
+  friend class remote_memory_handle;
   std::shared_ptr<worker> worker_;
   ucp_ep_h ep_;
 

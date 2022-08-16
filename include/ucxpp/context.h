@@ -16,8 +16,9 @@
 
 namespace ucxpp {
 
-class context {
+class context : public std::enable_shared_from_this<context> {
   friend class worker;
+  friend class local_memory_handle;
   ucp_context_h context_;
 
 public:

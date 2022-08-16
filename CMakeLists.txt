@@ -27,6 +27,7 @@ set(UCXPP_SOURCE_FILES
   src/worker.cc
   src/endpoint.cc
   src/address.cc
+  src/memory.cc
 )
 
 add_library(ucxpp STATIC ${UCXPP_SOURCE_FILES})
