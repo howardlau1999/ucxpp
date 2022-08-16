@@ -79,13 +79,30 @@ endpoint::tag_recv_awaitable endpoint::tag_recv(void *buffer, size_t length,
                             tag_mask);
 }
 
+endpoint::rma_put_awaitable endpoint::rma_put(void const *buffer, size_t length,
+                                              uint64_t raddr, ucp_rkey_h rkey) {
+  return rma_put_awaitable(this->shared_from_this(), buffer, length, raddr,
+                           rkey);
+}
+
+endpoint::rma_get_awaitable endpoint::rma_get(void *buffer, size_t length,
+                                              uint64_t raddr, ucp_rkey_h rkey) {
+  return rma_get_awaitable(this->shared_from_this(), buffer, length, raddr,
+                           rkey);
+}
+
 endpoint::stream_send_awaitable::stream_send_awaitable(
     std::shared_ptr<endpoint> endpoint, void const *buffer, size_t length)
     : endpoint_(endpoint), buffer_(buffer), length_(length) {}
 
 void endpoint::stream_send_awaitable::send_cb(void *request,
                                               ucs_status_t status,
-                                              void *user_data) {}
+                                              void *user_data) {
+  auto self = reinterpret_cast<stream_send_awaitable *>(user_data);
+  self->status_ = status;
+  ::ucp_request_free(request);
+  self->h_.resume();
+}
 
 bool endpoint::stream_send_awaitable::await_ready() noexcept { return false; }
 
@@ -222,6 +239,80 @@ bool endpoint::tag_recv_awaitable::await_suspend(std::coroutine_handle<> h) {
 std::pair<size_t, ucp_tag_t> endpoint::tag_recv_awaitable::await_resume() {
   check_ucs_status(status_, "error in ucp_tag_recv_nbx");
   return std::make_pair(recv_info_.length, recv_info_.sender_tag);
+}
+
+endpoint::rma_put_awaitable::rma_put_awaitable(
+    std::shared_ptr<endpoint> endpoint, void const *buffer, size_t length,
+    uint64_t raddr, ucp_rkey_h rkey)
+    : endpoint_(endpoint), buffer_(buffer), length_(length), raddr_(raddr),
+      rkey_(rkey) {}
+
+void endpoint::rma_put_awaitable::send_cb(void *request, ucs_status_t status,
+                                          void *user_data) {
+  auto self = reinterpret_cast<rma_put_awaitable *>(user_data);
+  self->status_ = status;
+  ::ucp_request_free(request);
+  self->h_.resume();
+}
+
+bool endpoint::rma_put_awaitable::await_ready() noexcept { return false; }
+
+bool endpoint::rma_put_awaitable::await_suspend(std::coroutine_handle<> h) {
+  h_ = h;
+  ucp_request_param_t send_param;
+  send_param.op_attr_mask =
+      UCP_OP_ATTR_FIELD_CALLBACK | UCP_OP_ATTR_FIELD_USER_DATA;
+  send_param.cb.send = &send_cb;
+  send_param.user_data = this;
+  auto request = ::ucp_put_nbx(endpoint_->ep_, buffer_, length_, raddr_, rkey_,
+                               &send_param);
+
+  if (UCS_PTR_IS_ERR(request)) {
+    status_ = UCS_PTR_STATUS(request);
+    return false;
+  }
+  return UCS_PTR_IS_PTR(request);
+}
+
+void endpoint::rma_put_awaitable::await_resume() {
+  check_ucs_status(status_, "error in ucp_put_nbx");
+}
+
+endpoint::rma_get_awaitable::rma_get_awaitable(
+    std::shared_ptr<endpoint> endpoint, void *buffer, size_t length,
+    uint64_t raddr, ucp_rkey_h rkey)
+    : endpoint_(endpoint), buffer_(buffer), length_(length), raddr_(raddr),
+      rkey_(rkey) {}
+
+void endpoint::rma_get_awaitable::send_cb(void *request, ucs_status_t status,
+                                          void *user_data) {
+  auto self = reinterpret_cast<rma_get_awaitable *>(user_data);
+  self->status_ = status;
+  ::ucp_request_free(request);
+  self->h_.resume();
+}
+
+bool endpoint::rma_get_awaitable::await_ready() noexcept { return false; }
+
+bool endpoint::rma_get_awaitable::await_suspend(std::coroutine_handle<> h) {
+  h_ = h;
+  ucp_request_param_t send_param;
+  send_param.op_attr_mask =
+      UCP_OP_ATTR_FIELD_CALLBACK | UCP_OP_ATTR_FIELD_USER_DATA;
+  send_param.cb.send = &send_cb;
+  send_param.user_data = this;
+  auto request = ::ucp_get_nbx(endpoint_->ep_, buffer_, length_, raddr_, rkey_,
+                               &send_param);
+
+  if (UCS_PTR_IS_ERR(request)) {
+    status_ = UCS_PTR_STATUS(request);
+    return false;
+  }
+  return UCS_PTR_IS_PTR(request);
+}
+
+void endpoint::rma_get_awaitable::await_resume() {
+  check_ucs_status(status_, "error in ucp_get_nbx");
 }
 
 endpoint::~endpoint() {
