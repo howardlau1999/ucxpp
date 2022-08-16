@@ -21,7 +21,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-20.04' }}
         run: sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 --slave /usr/bin/g++ g++ /usr/bin/g++-10 --slave /usr/bin/gcov gcov /usr/bin/gcov-10
       - name: Install UCX from source
-        run: (curl -fsSL https://github.com/openucx/ucx/releases/download/v1.13.0/ucx-1.13.0.tar.gz | tar xz) && cd ucx-1.13.0 && ./configure && make -j$(nproc)
+        run: (curl -fsSL https://github.com/openucx/ucx/releases/download/v1.13.0/ucx-1.13.0.tar.gz | tar xz) && cd ucx-1.13.0 && ./configure && make -j$(nproc) install
       - name: Configure
         run: cmake -GNinja -Bbuild .
       - name: Build
