@@ -66,11 +66,11 @@ packed_memory_rkey::~packed_memory_rkey() {
   }
 }
 
-remote_memory_handle::remote_memory_handle(
-    std::shared_ptr<endpoint> endpoint, packed_memory_rkey const &packed_rkey)
+remote_memory_handle::remote_memory_handle(std::shared_ptr<endpoint> endpoint,
+                                           void const *packed_rkey_buffer)
     : endpoint_(endpoint) {
   check_ucs_status(
-      ::ucp_ep_rkey_unpack(endpoint_->ep_, packed_rkey.get_buffer(), &rkey_),
+      ::ucp_ep_rkey_unpack(endpoint_->ep_, packed_rkey_buffer, &rkey_),
       "failed to unpack memory");
 }
 

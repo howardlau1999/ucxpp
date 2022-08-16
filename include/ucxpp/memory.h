@@ -44,7 +44,7 @@ class remote_memory_handle : public noncopyable {
 
 public:
   remote_memory_handle(std::shared_ptr<endpoint> endpoint,
-                       packed_memory_rkey const &packed_rkey);
+                       void const *packed_rkey_buffer);
   remote_memory_handle(remote_memory_handle &&other);
   ucp_rkey_h handle();
   ~remote_memory_handle();
