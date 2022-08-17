@@ -1,10 +1,16 @@
 #include "ucxpp/worker.h"
 
+#include <cassert>
+#include <functional>
 #include <memory>
+#include <type_traits>
+#include <ucs/type/status.h>
+#include <unordered_map>
 
 #include <ucp/api/ucp.h>
 
 #include "ucxpp/address.h"
+#include "ucxpp/awaitable.h"
 #include "ucxpp/error.h"
 
 #include "ucxpp/detail/debug.h"
@@ -29,10 +35,39 @@ local_address worker::get_address() {
   return ucxpp::local_address(shared_from_this(), address, address_length);
 }
 
+ucp_worker_h worker::handle() { return worker_; }
+
 bool worker::progress() { return ::ucp_worker_progress(worker_); }
+
+void worker::add_pending(ucs_status_ptr_t status,
+                         std::function<void(ucs_status_t)> &&callback) {
+  std::lock_guard<std::mutex> lock(pending_mutex_);
+  pending_.emplace(std::make_pair(status, std::move(callback)));
+}
+
+void worker::check_pending() {
+  std::lock_guard<std::mutex> lock(pending_mutex_);
+  std::unordered_map<ucs_status_ptr_t, std::function<void(ucs_status_t)>>
+      inprogress;
+  for (auto &pending : pending_) {
+    if (auto status = ::ucp_request_check_status(pending.first);
+        status != UCS_INPROGRESS) {
+      pending.second(status);
+    } else {
+      inprogress.emplace(std::make_pair(pending.first, pending.second));
+    }
+  }
+  std::swap(inprogress, pending_);
+}
 
 void worker::wait() {
   check_ucs_status(::ucp_worker_wait(worker_), "failed to wait worker");
+}
+
+send_awaitable worker::flush() {
+  return send_awaitable([worker = this->shared_from_this()](auto param) {
+    return ::ucp_worker_flush_nbx(worker->handle(), param);
+  });
 }
 
 worker::~worker() { ::ucp_worker_destroy(worker_); }

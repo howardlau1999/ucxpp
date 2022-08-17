@@ -59,6 +59,9 @@ ucxpp::task<void> client(ucxpp::connector &connector) {
   size_t bell;
   co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
   std::cout << "Sent bell" << std::endl;
+
+  co_await ep->flush();
+
   co_return;
 }
 
@@ -95,6 +98,8 @@ ucxpp::task<void> server(ucxpp::acceptor &acceptor) {
   size_t bell;
   co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
   std::cout << "Written by client: " << buffer << std::endl;
+
+  co_await ep->flush();
 
   co_return;
 }
