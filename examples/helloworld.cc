@@ -129,7 +129,7 @@ int main(int argc, char *argv[]) {
   });
   if (argc == 2) {
     auto listener = std::make_shared<ucxpp::socket::tcp_listener>(
-        loop, "", std::stoi(argv[1]));
+        loop, "0.0.0.0", std::stoi(argv[1]));
     auto acceptor = ucxpp::acceptor(worker, listener);
     server(acceptor);
   } else if (argc == 3) {

@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
   auto worker = std::make_shared<ucxpp::worker>(ctx);
   auto loop = ucxpp::socket::event_loop::new_loop();
   auto looper = std::thread([loop]() { loop->loop(); });
-  bool stopped;
+  bool stopped = false;
   auto progresser = std::thread([worker, &stopped]() {
     while (!stopped) {
       worker->progress();
@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
   });
   if (argc == 2) {
     auto listener = std::make_shared<ucxpp::socket::tcp_listener>(
-        loop, "", std::stoi(argv[1]));
+        loop, "0.0.0.0", std::stoi(argv[1]));
     auto acceptor = ucxpp::acceptor(worker, listener);
     server(acceptor);
   } else if (argc == 3) {
