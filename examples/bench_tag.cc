@@ -76,15 +76,11 @@ int main(int argc, char *argv[]) {
     auto listener = std::make_shared<ucxpp::socket::tcp_listener>(
         loop, "", std::stoi(argv[1]));
     auto acceptor = ucxpp::acceptor(worker, listener);
-    auto task = server(acceptor);
-    task.detach();
-    task.get_future().get();
+    server(acceptor);
   } else if (argc == 3) {
     auto connector =
         ucxpp::connector(worker, loop, argv[1], std::stoi(argv[2]));
-    auto task = client(connector);
-    task.detach();
-    task.get_future().get();
+    client(connector);
   } else {
     std::cout << "Usage: " << argv[0] << " <host> <port>" << std::endl;
   }

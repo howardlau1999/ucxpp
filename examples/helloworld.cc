@@ -42,7 +42,7 @@ ucxpp::task<void> client(ucxpp::connector &connector) {
   co_await ep->stream_recv(&rkey_length, sizeof(rkey_length));
   rkey_length = ::be64toh(rkey_length);
   std::vector<char> rkey_buffer(rkey_length);
-  int rkey_recved = 0;
+  size_t rkey_recved = 0;
   while (rkey_recved < rkey_length) {
     auto n = co_await ep->stream_recv(&rkey_buffer[rkey_recved],
                                       rkey_length - rkey_recved);
@@ -88,7 +88,6 @@ ucxpp::task<void> handle_endpoint(std::shared_ptr<ucxpp::endpoint> ep) {
   auto local_mr = ucxpp::local_memory_handle::register_mem(
       ep->worker_ptr()->context_ptr(), buffer, sizeof(buffer));
   auto packed_rkey = local_mr.pack_rkey();
-  auto rkey_buffer = packed_rkey.get_buffer();
   auto rkey_length = ::htobe64(packed_rkey.get_length());
   auto remote_addr = ::htobe64(reinterpret_cast<uint64_t>(buffer));
   co_await ep->stream_send(&remote_addr, sizeof(remote_addr));

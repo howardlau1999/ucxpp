@@ -35,7 +35,7 @@ std::vector<char> local_address::serialize() const {
 
 task<void> local_address::send_to(socket::tcp_connection &connection) {
   auto buffer = serialize();
-  int sent = 0;
+  size_t sent = 0;
   while (sent < buffer.size()) {
     int n = co_await connection.send(&buffer[sent], buffer.size() - sent);
     if (n < 0) {

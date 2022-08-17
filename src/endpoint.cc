@@ -30,7 +30,7 @@ std::shared_ptr<worker> endpoint::worker_ptr() { return worker_; }
 task<std::shared_ptr<endpoint>>
 endpoint::from_tcp_connection(socket::tcp_connection &conncetion,
                               std::shared_ptr<worker> worker) {
-  int address_length_read = 0;
+  size_t address_length_read = 0;
   char address_length_buffer[sizeof(size_t)];
   while (address_length_read < sizeof(size_t)) {
     int n =
@@ -45,7 +45,7 @@ endpoint::from_tcp_connection(socket::tcp_connection &conncetion,
   char *p = address_length_buffer;
   detail::deserialize(p, address_length);
   std::vector<char> address_buffer(address_length);
-  int address_read = 0;
+  size_t address_read = 0;
   while (address_read < address_length) {
     int n = co_await conncetion.recv(&address_buffer[address_read],
                                      address_length - address_read);
