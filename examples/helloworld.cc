@@ -61,6 +61,7 @@ ucxpp::task<void> client(ucxpp::connector &connector) {
   std::cout << "Sent bell" << std::endl;
 
   co_await ep->flush();
+  co_await ep->worker_ptr()->flush();
 
   co_return;
 }
@@ -100,6 +101,7 @@ ucxpp::task<void> server(ucxpp::acceptor &acceptor) {
   std::cout << "Written by client: " << buffer << std::endl;
 
   co_await ep->flush();
+  co_await ep->worker_ptr()->flush();
 
   co_return;
 }
