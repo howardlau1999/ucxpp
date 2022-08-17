@@ -66,8 +66,7 @@ ucxpp::task<void> client(ucxpp::connector &connector) {
   co_return;
 }
 
-ucxpp::task<void> server(ucxpp::acceptor &acceptor) {
-  auto ep = co_await acceptor.accept();
+ucxpp::task<void> handle_endpoint(std::shared_ptr<ucxpp::endpoint> ep) {
   ep->print();
   char buffer[6] = "Hello";
 
@@ -103,6 +102,14 @@ ucxpp::task<void> server(ucxpp::acceptor &acceptor) {
   co_await ep->flush();
   co_await ep->close();
 
+  co_return;
+}
+
+ucxpp::task<void> server(ucxpp::acceptor &acceptor) {
+  while (true) {
+    auto ep = co_await acceptor.accept();
+    handle_endpoint(ep).detach();
+  }
   co_return;
 }
 
