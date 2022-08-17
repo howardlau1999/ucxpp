@@ -21,7 +21,7 @@ namespace ucxpp {
 worker::worker(std::shared_ptr<context> ctx) : ctx_(ctx) {
   ucp_worker_params_t worker_params;
   worker_params.field_mask = UCP_WORKER_PARAM_FIELD_THREAD_MODE;
-  worker_params.thread_mode = UCS_THREAD_MODE_MULTI;
+  worker_params.thread_mode = UCS_THREAD_MODE_SINGLE;
   check_ucs_status(::ucp_worker_create(ctx->context_, &worker_params, &worker_),
                    "failed to create ucp worker");
 }

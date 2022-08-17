@@ -10,8 +10,8 @@
 #include "ucxpp/memory.h"
 #include <ucxpp/ucxpp.h>
 
-constexpr ucp_tag_t kTestTag = 0xFD709394;
-constexpr ucp_tag_t kBellTag = 0xbe11be11;
+constexpr ucp_tag_t kTestTag = 0xFD709394UL;
+constexpr ucp_tag_t kBellTag = 0xbe11be11UL;
 
 ucxpp::task<void> client(ucxpp::connector &connector) {
   auto ep = co_await connector.connect();
@@ -117,34 +117,26 @@ int main(int argc, char *argv[]) {
   auto ctx = ucxpp::context::builder()
                  .enable_stream()
                  .enable_tag()
-                 .enable_am()
                  .enable_rma()
-                 .enable_wakeup()
                  .build();
   auto worker = std::make_shared<ucxpp::worker>(ctx);
   auto loop = ucxpp::socket::event_loop::new_loop();
   auto looper = std::thread([loop]() { loop->loop(); });
-  bool stopped;
+  bool stopped = false;
   auto progresser = std::thread([worker, &stopped]() {
     while (!stopped) {
-      while (worker->progress())
-        ;
-      worker->wait();
+      worker->progress();
     }
   });
   if (argc == 2) {
     auto listener = std::make_shared<ucxpp::socket::tcp_listener>(
         loop, "", std::stoi(argv[1]));
     auto acceptor = ucxpp::acceptor(worker, listener);
-    auto task = server(acceptor);
-    task.detach();
-    task.get_future().get();
+    server(acceptor);
   } else if (argc == 3) {
     auto connector =
         ucxpp::connector(worker, loop, argv[1], std::stoi(argv[2]));
-    auto task = client(connector);
-    task.detach();
-    task.get_future().get();
+    client(connector);
   } else {
     std::cout << "Usage: " << argv[0] << " <host> <port>" << std::endl;
   }

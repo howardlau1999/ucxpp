@@ -40,7 +40,7 @@ public:
   stream_recv_awaitable stream_recv(void *buffer, size_t length);
   send_awaitable tag_send(void const *buffer, size_t length, ucp_tag_t tag);
   tag_recv_awaitable tag_recv(void *buffer, size_t length, ucp_tag_t tag,
-                              ucp_tag_t tag_mask = 0xFFFFFFFF);
+                              ucp_tag_t tag_mask = 0xFFFFFFFFFFFFFFFF);
   send_awaitable rma_put(void const *buffer, size_t length, uint64_t raddr,
                          ucp_rkey_h rkey);
   send_awaitable rma_get(void *buffer, size_t length, uint64_t raddr,
