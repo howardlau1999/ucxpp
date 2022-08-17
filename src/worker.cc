@@ -5,6 +5,7 @@
 #include <memory>
 #include <type_traits>
 #include <ucs/type/status.h>
+#include <ucs/type/thread_mode.h>
 #include <unordered_map>
 
 #include <ucp/api/ucp.h>
@@ -20,7 +21,7 @@ namespace ucxpp {
 worker::worker(std::shared_ptr<context> ctx) : ctx_(ctx) {
   ucp_worker_params_t worker_params;
   worker_params.field_mask = UCP_WORKER_PARAM_FIELD_THREAD_MODE;
-  worker_params.thread_mode = UCS_THREAD_MODE_SINGLE;
+  worker_params.thread_mode = UCS_THREAD_MODE_MULTI;
   check_ucs_status(::ucp_worker_create(ctx->context_, &worker_params, &worker_),
                    "failed to create ucp worker");
 }
@@ -65,8 +66,8 @@ void worker::wait() {
 }
 
 send_awaitable worker::flush() {
-  return send_awaitable([worker = this->shared_from_this()](auto param) {
-    return ::ucp_worker_flush_nbx(worker->handle(), param);
+  return send_awaitable([worker_h = worker_](auto param) {
+    return ::ucp_worker_flush_nbx(worker_h, param);
   });
 }
 

@@ -46,6 +46,7 @@ public:
   send_awaitable rma_get(void *buffer, size_t length, uint64_t raddr,
                          ucp_rkey_h rkey);
   send_awaitable flush();
+  send_awaitable close();
 
   ~endpoint();
 };

@@ -7,7 +7,7 @@
 namespace ucxpp {
 
 send_awaitable::send_awaitable(request_fn_t &&request_fn)
-    : request_fn_(request_fn) {}
+    : request_fn_(std::move(request_fn)) {}
 
 void send_awaitable::send_cb(void *request, ucs_status_t status,
                              void *user_data) {
@@ -41,7 +41,7 @@ void send_awaitable::await_resume() const {
 }
 
 stream_recv_awaitable::stream_recv_awaitable(request_fn_t &&request_fn)
-    : request_fn_(request_fn), received_(0) {}
+    : request_fn_(std::move(request_fn)), received_(0) {}
 
 void stream_recv_awaitable::stream_recv_cb(void *request, ucs_status_t status,
                                            size_t received, void *user_data) {
@@ -77,7 +77,7 @@ size_t stream_recv_awaitable::await_resume() const {
 }
 
 tag_recv_awaitable::tag_recv_awaitable(request_fn_t &&request_fn)
-    : request_fn_(request_fn) {}
+    : request_fn_(std::move(request_fn)) {}
 
 void tag_recv_awaitable::tag_recv_cb(void *request, ucs_status_t status,
                                      ucp_tag_recv_info_t const *tag_info,

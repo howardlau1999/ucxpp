@@ -61,7 +61,7 @@ endpoint::from_tcp_connection(socket::tcp_connection &conncetion,
 void endpoint::print() { ::ucp_ep_print_info(ep_, stdout); }
 
 send_awaitable endpoint::stream_send(void const *buffer, size_t length) {
-  return send_awaitable([=, ep = shared_from_this()](auto param) {
+  return send_awaitable([=, ep = this->shared_from_this()](auto param) {
     return ::ucp_stream_send_nbx(ep->ep_, buffer, length, param);
   });
 }
@@ -75,7 +75,7 @@ stream_recv_awaitable endpoint::stream_recv(void *buffer, size_t length) {
 
 send_awaitable endpoint::tag_send(void const *buffer, size_t length,
                                   ucp_tag_t tag) {
-  return send_awaitable([=, ep = shared_from_this()](auto param) {
+  return send_awaitable([=, ep = this->shared_from_this()](auto param) {
     return ::ucp_tag_send_nbx(ep->ep_, buffer, length, tag, param);
   });
 }
@@ -90,14 +90,14 @@ tag_recv_awaitable endpoint::tag_recv(void *buffer, size_t length,
 
 send_awaitable endpoint::rma_put(void const *buffer, size_t length,
                                  uint64_t raddr, ucp_rkey_h rkey) {
-  return send_awaitable([=, ep = shared_from_this()](auto param) {
+  return send_awaitable([=, ep = this->shared_from_this()](auto param) {
     return ::ucp_put_nbx(ep->ep_, buffer, length, raddr, rkey, param);
   });
 }
 
 send_awaitable endpoint::rma_get(void *buffer, size_t length, uint64_t raddr,
                                  ucp_rkey_h rkey) {
-  return send_awaitable([=, ep = shared_from_this()](auto param) {
+  return send_awaitable([=, ep = this->shared_from_this()](auto param) {
     return ::ucp_get_nbx(ep->ep_, buffer, length, raddr, rkey, param);
   });
 }
@@ -108,13 +108,12 @@ send_awaitable endpoint::flush() {
   });
 }
 
-endpoint::~endpoint() {
-  auto request =
-      ::ucp_ep_close_nb(ep_, ucp_ep_close_mode::UCP_EP_CLOSE_MODE_FLUSH);
-  if (UCS_PTR_IS_PTR(request)) {
-    worker_->add_pending(request,
-                         [request](...) { ::ucp_request_free(request); });
-  }
+send_awaitable endpoint::close() {
+  return send_awaitable([ep = this->shared_from_this()](auto param) {
+    return ::ucp_ep_close_nbx(ep->ep_, param);
+  });
 }
+
+endpoint::~endpoint() {}
 
 } // namespace ucxpp

@@ -43,7 +43,6 @@ ucp_mem_h local_memory_handle::handle() { return mem_; }
 
 local_memory_handle::~local_memory_handle() {
   if (mem_ != nullptr) {
-    // FIXME: this will randomly segfault
     (void)::ucp_mem_unmap(ctx_->context_, mem_);
   }
 }
@@ -83,7 +82,6 @@ ucp_rkey_h remote_memory_handle::handle() { return rkey_; }
 
 remote_memory_handle::~remote_memory_handle() {
   if (rkey_ != nullptr) {
-    // FIXME: this will randomly segfault
     ::ucp_rkey_destroy(rkey_);
   }
 }

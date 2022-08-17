@@ -86,8 +86,8 @@ template <class T> struct task {
   }
   ~task() {
     if (!detached_) {
+      h_.promise().set_detached_task(h_);
       get_future().wait();
-      h_.destroy();
     }
   }
   task(task &&) = default;
