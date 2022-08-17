@@ -49,7 +49,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES GNU)
   endif ()
 endif ()
 
-set(UCXPP_EXAMPLES helloworld)
+set(UCXPP_EXAMPLES helloworld bench_tag)
 if (UCXPP_BUILD_EXAMPLES)
   foreach (EXAMPLE ${UCXPP_EXAMPLES})
     add_executable(${EXAMPLE} examples/${EXAMPLE}.cc)

@@ -10,8 +10,7 @@
 
 namespace ucxpp {
 
-context::builder::builder()
-    : features_(UCP_FEATURE_WAKEUP), print_config_(false) {}
+context::builder::builder() : features_(0), print_config_(false) {}
 std::shared_ptr<context> context::builder::build() {
   return std::make_shared<context>(features_, print_config_);
 }
