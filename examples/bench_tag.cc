@@ -74,7 +74,6 @@ int main(int argc, char *argv[]) {
   } else {
     std::cout << "Usage: " << argv[0] << " <host> <port>" << std::endl;
   }
-  std::cout << "Press any key to exit..." << std::endl;
   while (worker.use_count() > 1) {
     worker->progress();
   }
