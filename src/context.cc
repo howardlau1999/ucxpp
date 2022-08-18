@@ -6,6 +6,7 @@
 #include <ucp/api/ucp.h>
 #include <ucp/api/ucp_def.h>
 
+#include "ucxpp/awaitable.h"
 #include "ucxpp/error.h"
 
 namespace ucxpp {
@@ -50,10 +51,12 @@ context::context(uint64_t features, bool print_config) {
   check_ucs_status(::ucp_config_read(NULL, NULL, &config),
                    "failed to read ucp config");
   ucp_params_t ucp_params;
-  ucp_params.field_mask =
-      UCP_PARAM_FIELD_FEATURES | UCP_PARAM_FIELD_MT_WORKERS_SHARED;
+  ucp_params.field_mask = UCP_PARAM_FIELD_FEATURES |
+                          UCP_PARAM_FIELD_MT_WORKERS_SHARED |
+                          UCP_PARAM_FIELD_REQUEST_SIZE;
   ucp_params.features = features;
   ucp_params.mt_workers_shared = 1;
+  ucp_params.request_size = sizeof(request_context);
   check_ucs_status(::ucp_init(&ucp_params, config, &context_),
                    "failed to init ucp");
   if (print_config) {

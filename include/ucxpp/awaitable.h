@@ -6,6 +6,10 @@
 
 #include <ucp/api/ucp.h>
 
+struct request_context {
+  void *awaitable;
+};
+
 namespace ucxpp {
 
 /* Common awaitable class for send-like callbacks */

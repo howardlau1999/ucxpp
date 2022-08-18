@@ -14,13 +14,13 @@
 constexpr ucp_tag_t kTestTag = 0xFD709394;
 constexpr ucp_tag_t kBellTag = 0xbe11be11;
 
-constexpr size_t kLongMsgSize = 47008;
+constexpr size_t kMsgSize = 8;
 static std::atomic<size_t> gCounter = 0;
 
 ucxpp::task<void> client(ucxpp::connector &connector) {
   auto ep = co_await connector.connect();
   ep->print();
-  char buffer[kLongMsgSize];
+  char buffer[kMsgSize];
   char bell;
 
   while (true) {
@@ -38,7 +38,7 @@ ucxpp::task<void> client(ucxpp::connector &connector) {
 ucxpp::task<void> server(ucxpp::acceptor &acceptor) {
   auto ep = co_await acceptor.accept();
   ep->print();
-  char buffer[kLongMsgSize];
+  char buffer[kMsgSize];
   char bell;
 
   while (true) {
