@@ -36,17 +36,17 @@ public:
   from_tcp_connection(socket::tcp_connection &conncetion,
                       std::shared_ptr<worker> worker);
 
-  send_awaitable stream_send(void const *buffer, size_t length);
+  stream_send_awaitable stream_send(void const *buffer, size_t length);
   stream_recv_awaitable stream_recv(void *buffer, size_t length);
-  send_awaitable tag_send(void const *buffer, size_t length, ucp_tag_t tag);
+  tag_send_awaitable tag_send(void const *buffer, size_t length, ucp_tag_t tag);
   tag_recv_awaitable tag_recv(void *buffer, size_t length, ucp_tag_t tag,
                               ucp_tag_t tag_mask = 0xFFFFFFFFFFFFFFFF);
-  send_awaitable rma_put(void const *buffer, size_t length, uint64_t raddr,
-                         ucp_rkey_h rkey);
-  send_awaitable rma_get(void *buffer, size_t length, uint64_t raddr,
-                         ucp_rkey_h rkey);
-  send_awaitable flush();
-  send_awaitable close();
+  rma_put_awaitable rma_put(void const *buffer, size_t length, uint64_t raddr,
+                            ucp_rkey_h rkey);
+  rma_get_awaitable rma_get(void *buffer, size_t length, uint64_t raddr,
+                            ucp_rkey_h rkey);
+  ep_flush_awaitable flush();
+  ep_close_awaitable close();
 
   ~endpoint();
 };

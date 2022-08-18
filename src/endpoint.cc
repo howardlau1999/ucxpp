@@ -60,10 +60,8 @@ endpoint::from_tcp_connection(socket::tcp_connection &conncetion,
 
 void endpoint::print() { ::ucp_ep_print_info(ep_, stdout); }
 
-send_awaitable endpoint::stream_send(void const *buffer, size_t length) {
-  return send_awaitable([=, ep = ep_](auto param) {
-    return ::ucp_stream_send_nbx(ep, buffer, length, param);
-  });
+stream_send_awaitable endpoint::stream_send(void const *buffer, size_t length) {
+  return stream_send_awaitable(ep_, buffer, length);
 }
 
 stream_recv_awaitable endpoint::stream_recv(void *buffer, size_t length) {
@@ -72,11 +70,9 @@ stream_recv_awaitable endpoint::stream_recv(void *buffer, size_t length) {
   });
 }
 
-send_awaitable endpoint::tag_send(void const *buffer, size_t length,
-                                  ucp_tag_t tag) {
-  return send_awaitable([=, ep = ep_](auto param) {
-    return ::ucp_tag_send_nbx(ep, buffer, length, tag, param);
-  });
+tag_send_awaitable endpoint::tag_send(void const *buffer, size_t length,
+                                      ucp_tag_t tag) {
+  return tag_send_awaitable(ep_, buffer, length, tag);
 }
 
 tag_recv_awaitable endpoint::tag_recv(void *buffer, size_t length,
@@ -86,29 +82,19 @@ tag_recv_awaitable endpoint::tag_recv(void *buffer, size_t length,
   });
 }
 
-send_awaitable endpoint::rma_put(void const *buffer, size_t length,
-                                 uint64_t raddr, ucp_rkey_h rkey) {
-  return send_awaitable([=, ep = ep_](auto param) {
-    return ::ucp_put_nbx(ep, buffer, length, raddr, rkey, param);
-  });
+rma_put_awaitable endpoint::rma_put(void const *buffer, size_t length,
+                                    uint64_t raddr, ucp_rkey_h rkey) {
+  return rma_put_awaitable(ep_, buffer, length, raddr, rkey);
 }
 
-send_awaitable endpoint::rma_get(void *buffer, size_t length, uint64_t raddr,
-                                 ucp_rkey_h rkey) {
-  return send_awaitable([=, ep = ep_](auto param) {
-    return ::ucp_get_nbx(ep, buffer, length, raddr, rkey, param);
-  });
+rma_get_awaitable endpoint::rma_get(void *buffer, size_t length, uint64_t raddr,
+                                    ucp_rkey_h rkey) {
+  return rma_get_awaitable(ep_, buffer, length, raddr, rkey);
 }
 
-send_awaitable endpoint::flush() {
-  return send_awaitable(
-      [ep = ep_](auto param) { return ::ucp_ep_flush_nbx(ep, param); });
-}
+ep_flush_awaitable endpoint::flush() { return ep_flush_awaitable(ep_); }
 
-send_awaitable endpoint::close() {
-  return send_awaitable(
-      [ep = ep_](auto param) { return ::ucp_ep_close_nbx(ep, param); });
-}
+ep_close_awaitable endpoint::close() { return ep_close_awaitable(ep_); }
 
 endpoint::~endpoint() {}
 

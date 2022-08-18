@@ -3,6 +3,7 @@
 #include <atomic>
 #include <coroutine>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <ucs/type/status.h>
 
@@ -16,23 +17,13 @@ struct request_context {
 namespace ucxpp {
 
 /* Common awaitable class for send-like callbacks */
-class send_awaitable {
-public:
-  using request_fn_t =
-      std::function<ucs_status_ptr_t(ucp_request_param_t const *)>;
-
-private:
-  request_fn_t request_fn_;
+template <class Derived> class send_awaitable {
   std::atomic<std::coroutine_handle<>> h_;
   ucs_status_t status_;
-  std::atomic<bool> done_;
 
 public:
-  send_awaitable(request_fn_t &&request_fn)
-      : request_fn_(std::move(request_fn)) {}
-
   static void send_cb(void *request, ucs_status_t status, void *user_data) {
-    auto self = static_cast<send_awaitable *>(user_data);
+    auto self = static_cast<Derived *>(user_data);
     self->status_ = status;
     ::ucp_request_free(request);
     self->done_.store(true);
@@ -41,14 +32,16 @@ public:
     }
   }
 
-  bool await_ready() noexcept {
+  ucp_request_param_t build_param() {
     ucp_request_param_t send_param;
     send_param.op_attr_mask =
         UCP_OP_ATTR_FIELD_CALLBACK | UCP_OP_ATTR_FIELD_USER_DATA;
     send_param.cb.send = &send_cb;
     send_param.user_data = this;
-    auto request = request_fn_(&send_param);
+    return send_param;
+  }
 
+  bool check_request_ready(ucs_status_ptr_t request) {
     status_ = UCS_PTR_STATUS(request);
     if (UCS_PTR_IS_ERR(status_)) {
       return false;
@@ -58,7 +51,7 @@ public:
   }
 
   bool await_suspend(std::coroutine_handle<> h) {
-    if (done_) {
+    if (reinterpret_cast<Derived *>(this)->done_) {
       return false;
     }
     h_ = h;
@@ -66,6 +59,135 @@ public:
   }
 
   void await_resume() const { check_ucs_status(status_, "operation failed"); }
+};
+
+class stream_send_awaitable : public send_awaitable<stream_send_awaitable> {
+  ucp_ep_h ep_;
+  void const *buffer_;
+  size_t length_;
+  std::atomic<bool> done_;
+  friend class send_awaitable;
+
+public:
+  stream_send_awaitable(ucp_ep_h ep, void const *buffer, size_t length)
+      : ep_(ep), buffer_(buffer), length_(length), done_(false) {}
+
+  bool await_ready() noexcept {
+    auto send_param = build_param();
+    auto request = ::ucp_stream_send_nbx(ep_, buffer_, length_, &send_param);
+    return check_request_ready(request);
+  }
+};
+
+class tag_send_awaitable : public send_awaitable<tag_send_awaitable> {
+  ucp_ep_h ep_;
+  ucp_tag_t tag_;
+  void const *buffer_;
+  size_t length_;
+  std::atomic<bool> done_;
+  friend class send_awaitable;
+
+public:
+  tag_send_awaitable(ucp_ep_h ep, void const *buffer, size_t length,
+                     ucp_tag_t tag)
+      : ep_(ep), tag_(tag), buffer_(buffer), length_(length), done_(false) {}
+
+  bool await_ready() noexcept {
+    auto send_param = build_param();
+    auto request = ::ucp_tag_send_nbx(ep_, buffer_, length_, tag_, &send_param);
+    return check_request_ready(request);
+  }
+};
+
+class rma_put_awaitable : public send_awaitable<rma_put_awaitable> {
+  ucp_ep_h ep_;
+  void const *buffer_;
+  size_t length_;
+  uint64_t remote_addr_;
+  ucp_rkey_h rkey_;
+  std::atomic<bool> done_;
+  friend class send_awaitable;
+
+public:
+  rma_put_awaitable(ucp_ep_h ep, void const *buffer, size_t length,
+                    uint64_t remote_addr, ucp_rkey_h rkey)
+      : ep_(ep), buffer_(buffer), length_(length), remote_addr_(remote_addr),
+        rkey_(rkey), done_(false) {}
+
+  bool await_ready() noexcept {
+    auto send_param = build_param();
+    auto request =
+        ::ucp_put_nbx(ep_, buffer_, length_, remote_addr_, rkey_, &send_param);
+    return check_request_ready(request);
+  }
+};
+
+class rma_get_awaitable : public send_awaitable<rma_get_awaitable> {
+  ucp_ep_h ep_;
+  void *buffer_;
+  size_t length_;
+  uint64_t remote_addr_;
+  ucp_rkey_h rkey_;
+  std::atomic<bool> done_;
+  friend class send_awaitable;
+
+public:
+  rma_get_awaitable(ucp_ep_h ep, void *buffer, size_t length,
+                    uint64_t remote_addr, ucp_rkey_h rkey)
+      : ep_(ep), buffer_(buffer), length_(length), remote_addr_(remote_addr),
+        rkey_(rkey), done_(false) {}
+
+  bool await_ready() noexcept {
+    auto send_param = build_param();
+    auto request =
+        ::ucp_get_nbx(ep_, buffer_, length_, remote_addr_, rkey_, &send_param);
+    return check_request_ready(request);
+  }
+};
+
+class ep_flush_awaitable : public send_awaitable<ep_flush_awaitable> {
+  ucp_ep_h ep_;
+  std::atomic<bool> done_;
+  friend class send_awaitable;
+
+public:
+  ep_flush_awaitable(ucp_ep_h ep) : ep_(ep), done_(false) {}
+
+  bool await_ready() noexcept {
+    auto send_param = build_param();
+    auto request = ::ucp_ep_flush_nbx(ep_, &send_param);
+    return check_request_ready(request);
+  }
+};
+
+class ep_close_awaitable : public send_awaitable<ep_close_awaitable> {
+  ucp_ep_h ep_;
+  std::atomic<bool> done_;
+  friend class send_awaitable;
+
+public:
+  ep_close_awaitable(ucp_ep_h ep) : ep_(ep), done_(false) {}
+
+  bool await_ready() noexcept {
+    auto send_param = build_param();
+    auto request = ::ucp_ep_close_nbx(ep_, &send_param);
+    return check_request_ready(request);
+  }
+};
+
+class worker_flush_awaitable : public send_awaitable<worker_flush_awaitable> {
+  ucp_worker_h worker_;
+  std::atomic<bool> done_;
+  friend class send_awaitable;
+
+public:
+  worker_flush_awaitable(ucp_worker_h worker) : worker_(worker), done_(false) {}
+
+  bool await_ready() noexcept {
+    auto send_param = build_param();
+    auto request = ::ucp_worker_flush_nbx(worker_, &send_param);
+    return check_request_ready(request);
+  }
 };
 
 /* Common awaitable class for stream-recv-like callbacks */

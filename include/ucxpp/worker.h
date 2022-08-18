@@ -30,7 +30,7 @@ public:
   ucp_worker_h handle();
   bool progress();
   void wait();
-  send_awaitable flush();
+  worker_flush_awaitable flush();
   void check_pending();
   void add_pending(ucs_status_ptr_t status,
                    std::function<void(ucs_status_t)> &&callback);

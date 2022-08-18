@@ -65,10 +65,8 @@ void worker::wait() {
   check_ucs_status(::ucp_worker_wait(worker_), "failed to wait worker");
 }
 
-send_awaitable worker::flush() {
-  return send_awaitable([worker_h = worker_](auto param) {
-    return ::ucp_worker_flush_nbx(worker_h, param);
-  });
+worker_flush_awaitable worker::flush() {
+  return worker_flush_awaitable(worker_);
 }
 
 worker::~worker() { ::ucp_worker_destroy(worker_); }
