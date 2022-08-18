@@ -35,22 +35,37 @@ set(UCXPP_SOURCE_FILES
 )
 
 add_library(ucxpp STATIC ${UCXPP_SOURCE_FILES})
-target_link_libraries(ucxpp ucx::ucp ucx::uct ucx::ucs Threads::Threads)
+set(UCXPP_LINK_LIBRARIES ucx::ucp ucx::uct ucx::ucs Threads::Threads)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES Clang)
-  target_compile_options(ucxpp
+  list(APPEND
+    UCXPP_COMPILE_OPTIONS
     PUBLIC
     -stdlib=libc++
+    PUBLIC
     -fcoroutines-ts
+  )
+  list(APPEND
+    UCXPP_LINK_OPTIONS
+    PUBLIC
+    -stdlib=libc++
   )
 elseif (CMAKE_CXX_COMPILER_ID MATCHES GNU)
   if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "11") 
-    target_compile_options(ucxpp
+    list(APPEND
+      UCXPP_COMPILE_OPTIONS
       PUBLIC
       -fcoroutines
     )
   endif ()
 endif ()
+if (UCXPP_COMPILE_OPTIONS)
+  target_compile_options(ucxpp ${UCXPP_COMPILE_OPTIONS})
+endif ()
+if (UCXPP_LINK_OPTIONS)
+  target_link_options(ucxpp ${UCXPP_LINK_OPTIONS})
+endif ()
+target_link_libraries(ucxpp ${UCXPP_LINK_LIBRARIES})
 
 set(UCXPP_EXAMPLES helloworld bench_tag)
 if (UCXPP_BUILD_EXAMPLES)
