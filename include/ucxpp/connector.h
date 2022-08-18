@@ -20,6 +20,8 @@ public:
   connector(std::shared_ptr<worker> worker,
             std::shared_ptr<socket::event_loop> loop,
             std::string const &hostname, uint16_t port);
+  connector(connector &&) = default;
+  connector &operator=(connector &&) = default;
   task<std::shared_ptr<endpoint>> connect();
 };
 

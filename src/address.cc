@@ -25,6 +25,13 @@ local_address::local_address(local_address &&other)
       address_(std::exchange(other.address_, nullptr)),
       address_length_(other.address_length_) {}
 
+local_address &local_address::operator=(local_address &&other) {
+  worker_ = std::move(other.worker_);
+  address_ = std::exchange(other.address_, nullptr);
+  address_length_ = other.address_length_;
+  return *this;
+}
+
 std::vector<char> local_address::serialize() const {
   std::vector<char> buffer;
   auto it = std::back_inserter(buffer);

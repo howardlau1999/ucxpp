@@ -23,6 +23,7 @@ public:
   local_address(std::shared_ptr<worker> worker, ucp_address_t *address,
                 size_t address_length);
   local_address(local_address &&other);
+  local_address &operator=(local_address &&other);
   std::vector<char> serialize() const;
   const ucp_address_t *get_address() const;
   size_t get_length() const;

@@ -16,7 +16,7 @@ constexpr ucp_tag_t kTestTag = 0xFD709394;
 constexpr size_t kMsgSize = 8;
 static std::atomic<size_t> gCounter = 0;
 
-ucxpp::task<void> client(ucxpp::connector &connector) {
+ucxpp::task<void> client(ucxpp::connector connector) {
   auto ep = co_await connector.connect();
   ep->print();
   char buffer[kMsgSize];
@@ -32,7 +32,7 @@ ucxpp::task<void> client(ucxpp::connector &connector) {
   co_return;
 }
 
-ucxpp::task<void> server(ucxpp::acceptor &acceptor) {
+ucxpp::task<void> server(ucxpp::acceptor acceptor) {
   auto ep = co_await acceptor.accept();
   ep->print();
   char buffer[kMsgSize];
@@ -54,11 +54,6 @@ int main(int argc, char *argv[]) {
   auto loop = ucxpp::socket::event_loop::new_loop();
   auto looper = std::thread([loop]() { loop->loop(); });
   bool stopped = false;
-  auto progresser = std::thread([worker, &stopped]() {
-    while (!stopped) {
-      worker->progress();
-    }
-  });
   auto reporter = std::thread([&stopped]() {
     using namespace std::literals::chrono_literals;
     while (!stopped) {
@@ -71,18 +66,21 @@ int main(int argc, char *argv[]) {
     auto listener = std::make_shared<ucxpp::socket::tcp_listener>(
         loop, "0.0.0.0", std::stoi(argv[1]));
     auto acceptor = ucxpp::acceptor(worker, listener);
-    server(acceptor);
+    server(std::move(acceptor)).detach();
   } else if (argc == 3) {
     auto connector =
         ucxpp::connector(worker, loop, argv[1], std::stoi(argv[2]));
-    client(connector);
+    client(std::move(connector)).detach();
   } else {
     std::cout << "Usage: " << argv[0] << " <host> <port>" << std::endl;
+  }
+  std::cout << "Press any key to exit..." << std::endl;
+  while (worker.use_count() > 1) {
+    worker->progress();
   }
   stopped = true;
   loop->close();
   looper.join();
-  progresser.join();
   reporter.join();
   return 0;
 }

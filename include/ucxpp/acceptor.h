@@ -18,6 +18,8 @@ class acceptor {
 public:
   acceptor(std::shared_ptr<worker> worker,
            std::shared_ptr<socket::tcp_listener> listener);
+  acceptor(acceptor &&) = default;
+  acceptor &operator=(acceptor &&) = default;
   task<std::shared_ptr<endpoint>> accept();
 };
 
