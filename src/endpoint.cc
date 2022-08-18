@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <ucp/api/ucp.h>
+#include <ucp/api/ucp_def.h>
 
 #include "ucxpp/address.h"
 #include "ucxpp/awaitable.h"
@@ -60,14 +61,14 @@ endpoint::from_tcp_connection(socket::tcp_connection &conncetion,
 
 void endpoint::print() { ::ucp_ep_print_info(ep_, stdout); }
 
+ucp_ep_h endpoint::handle() { return ep_; }
+
 stream_send_awaitable endpoint::stream_send(void const *buffer, size_t length) {
   return stream_send_awaitable(ep_, buffer, length);
 }
 
 stream_recv_awaitable endpoint::stream_recv(void *buffer, size_t length) {
-  return stream_recv_awaitable([=, ep = ep_](auto param, auto received) {
-    return ::ucp_stream_recv_nbx(ep, buffer, length, received, param);
-  });
+  return stream_recv_awaitable(ep_, buffer, length);
 }
 
 tag_send_awaitable endpoint::tag_send(void const *buffer, size_t length,
@@ -77,9 +78,7 @@ tag_send_awaitable endpoint::tag_send(void const *buffer, size_t length,
 
 tag_recv_awaitable endpoint::tag_recv(void *buffer, size_t length,
                                       ucp_tag_t tag, ucp_tag_t tag_mask) {
-  return tag_recv_awaitable([=, worker = worker_->worker_](auto param) {
-    return ::ucp_tag_recv_nbx(worker, buffer, length, tag, tag_mask, param);
-  });
+  return tag_recv_awaitable(worker_->worker_, buffer, length, tag, tag_mask);
 }
 
 rma_put_awaitable endpoint::rma_put(void const *buffer, size_t length,

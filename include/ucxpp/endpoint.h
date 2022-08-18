@@ -47,6 +47,7 @@ public:
                             ucp_rkey_h rkey);
   ep_flush_awaitable flush();
   ep_close_awaitable close();
+  ucp_ep_h handle();
 
   ~endpoint();
 };
