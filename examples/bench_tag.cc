@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <vector>
 
 #include <ucp/api/ucp_def.h>
 
@@ -13,16 +14,16 @@
 
 constexpr ucp_tag_t kTestTag = 0xFD709394;
 
-constexpr size_t kMsgSize = 8;
+constexpr size_t kMsgSize = 64;
 static std::atomic<size_t> gCounter = 0;
 
 ucxpp::task<void> client(ucxpp::connector connector) {
   auto ep = co_await connector.connect();
   ep->print();
-  char buffer[kMsgSize];
+  std::vector<char> buffer(kMsgSize);
 
   while (true) {
-    co_await ep->tag_send(buffer, sizeof(buffer), kTestTag);
+    co_await ep->tag_send(&buffer[0], kMsgSize, kTestTag);
     gCounter.fetch_add(1, std::memory_order_seq_cst);
   }
 
@@ -35,10 +36,10 @@ ucxpp::task<void> client(ucxpp::connector connector) {
 ucxpp::task<void> server(ucxpp::acceptor acceptor) {
   auto ep = co_await acceptor.accept();
   ep->print();
-  char buffer[kMsgSize];
+  std::vector<char> buffer(kMsgSize);
 
   while (true) {
-    co_await ep->tag_recv(buffer, sizeof(buffer), kTestTag);
+    co_await ep->tag_recv(&buffer[0], kMsgSize, kTestTag);
     gCounter.fetch_add(1, std::memory_order_seq_cst);
   }
 

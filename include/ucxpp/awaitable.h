@@ -44,7 +44,7 @@ public:
   bool check_request_ready(ucs_status_ptr_t request) {
     status_ = UCS_PTR_STATUS(request);
     if (UCS_PTR_IS_ERR(status_)) {
-      return false;
+      return true;
     }
 
     return status_ == UCS_OK;
