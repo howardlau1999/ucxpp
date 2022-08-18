@@ -6,6 +6,7 @@ add_compile_options(-Wall -Wextra -pedantic -Werror)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(Threads REQUIRED)
+find_package(ucx REQUIRED)
 
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
@@ -34,7 +35,7 @@ set(UCXPP_SOURCE_FILES
 )
 
 add_library(ucxpp STATIC ${UCXPP_SOURCE_FILES})
-target_link_libraries(ucxpp ucp ucs uct Threads::Threads)
+target_link_libraries(ucxpp ucx::ucp ucx::uct ucx::ucs Threads::Threads)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES Clang)
   target_compile_options(ucxpp
