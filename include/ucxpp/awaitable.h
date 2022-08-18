@@ -22,9 +22,9 @@ public:
       std::function<ucs_status_ptr_t(ucp_request_param_t const *)>;
 
 private:
+  request_fn_t request_fn_;
   std::atomic<std::coroutine_handle<>> h_;
   ucs_status_t status_;
-  request_fn_t request_fn_;
   std::atomic<bool> done_;
 
 public:
@@ -75,10 +75,10 @@ public:
       ucp_request_param_t const *, size_t *received)>;
 
 private:
-  std::coroutine_handle<> h_;
-  ucs_status_t status_;
   request_fn_t request_fn_;
+  std::coroutine_handle<> h_;
   size_t received_;
+  ucs_status_t status_;
 
 public:
   stream_recv_awaitable(request_fn_t &&request_fn)
@@ -125,10 +125,10 @@ public:
       std::function<ucs_status_ptr_t(ucp_request_param_t const *)>;
 
 private:
-  std::coroutine_handle<> h_;
-  ucs_status_t status_;
   request_fn_t request_fn_;
+  std::coroutine_handle<> h_;
   ucp_tag_recv_info_t recv_info_;
+  ucs_status_t status_;
 
 public:
   tag_recv_awaitable(request_fn_t &&request_fn)
