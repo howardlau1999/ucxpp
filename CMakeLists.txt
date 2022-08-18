@@ -24,7 +24,6 @@ set(UCXPP_SOURCE_FILES
   src/socket/event_loop.cc
   src/socket/tcp_connection.cc
   src/socket/tcp_listener.cc
-  src/awaitable.cc
   src/acceptor.cc
   src/connector.cc
   src/context.cc
