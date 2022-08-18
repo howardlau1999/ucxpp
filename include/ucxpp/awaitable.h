@@ -1,8 +1,10 @@
 #pragma once
 
+#include <atomic>
 #include <coroutine>
 #include <cstddef>
 #include <functional>
+#include <ucs/type/status.h>
 
 #include <ucp/api/ucp.h>
 
@@ -20,9 +22,10 @@ public:
       std::function<ucs_status_ptr_t(ucp_request_param_t const *)>;
 
 private:
-  std::coroutine_handle<> h_;
+  std::atomic<std::coroutine_handle<>> h_;
   ucs_status_t status_;
   request_fn_t request_fn_;
+  std::atomic<bool> done_;
 
 public:
   send_awaitable(request_fn_t &&request_fn)
@@ -32,14 +35,13 @@ public:
     auto self = static_cast<send_awaitable *>(user_data);
     self->status_ = status;
     ::ucp_request_free(request);
-    self->h_.resume();
+    self->done_.store(true);
+    if (self->h_.load()) {
+      self->h_.load().resume();
+    }
   }
 
-  bool await_ready() const noexcept { return false; }
-
-  bool await_suspend(std::coroutine_handle<> h) {
-    h_ = h;
-
+  bool await_ready() noexcept {
     ucp_request_param_t send_param;
     send_param.op_attr_mask =
         UCP_OP_ATTR_FIELD_CALLBACK | UCP_OP_ATTR_FIELD_USER_DATA;
@@ -51,7 +53,16 @@ public:
     if (UCS_PTR_IS_ERR(status_)) {
       return false;
     }
-    return UCS_PTR_IS_PTR(request);
+
+    return status_ == UCS_OK;
+  }
+
+  bool await_suspend(std::coroutine_handle<> h) {
+    if (done_) {
+      return false;
+    }
+    h_ = h;
+    return true;
   }
 
   void await_resume() const { check_ucs_status(status_, "operation failed"); }
