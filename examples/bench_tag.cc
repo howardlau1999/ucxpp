@@ -12,7 +12,6 @@
 #include <ucxpp/ucxpp.h>
 
 constexpr ucp_tag_t kTestTag = 0xFD709394;
-constexpr ucp_tag_t kBellTag = 0xbe11be11;
 
 constexpr size_t kMsgSize = 8;
 static std::atomic<size_t> gCounter = 0;
@@ -21,11 +20,9 @@ ucxpp::task<void> client(ucxpp::connector &connector) {
   auto ep = co_await connector.connect();
   ep->print();
   char buffer[kMsgSize];
-  char bell;
 
   while (true) {
     co_await ep->tag_send(buffer, sizeof(buffer), kTestTag);
-    co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
     gCounter.fetch_add(1, std::memory_order_seq_cst);
   }
 
@@ -39,11 +36,9 @@ ucxpp::task<void> server(ucxpp::acceptor &acceptor) {
   auto ep = co_await acceptor.accept();
   ep->print();
   char buffer[kMsgSize];
-  char bell;
 
   while (true) {
     co_await ep->tag_recv(buffer, sizeof(buffer), kTestTag);
-    co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
     gCounter.fetch_add(1, std::memory_order_seq_cst);
   }
 
