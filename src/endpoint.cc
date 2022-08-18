@@ -61,57 +61,53 @@ endpoint::from_tcp_connection(socket::tcp_connection &conncetion,
 void endpoint::print() { ::ucp_ep_print_info(ep_, stdout); }
 
 send_awaitable endpoint::stream_send(void const *buffer, size_t length) {
-  return send_awaitable([=, ep = this->shared_from_this()](auto param) {
-    return ::ucp_stream_send_nbx(ep->ep_, buffer, length, param);
+  return send_awaitable([=, ep = ep_](auto param) {
+    return ::ucp_stream_send_nbx(ep, buffer, length, param);
   });
 }
 
 stream_recv_awaitable endpoint::stream_recv(void *buffer, size_t length) {
-  return stream_recv_awaitable(
-      [=, ep = this->shared_from_this()](auto param, auto received) {
-        return ::ucp_stream_recv_nbx(ep->ep_, buffer, length, received, param);
-      });
+  return stream_recv_awaitable([=, ep = ep_](auto param, auto received) {
+    return ::ucp_stream_recv_nbx(ep, buffer, length, received, param);
+  });
 }
 
 send_awaitable endpoint::tag_send(void const *buffer, size_t length,
                                   ucp_tag_t tag) {
-  return send_awaitable([=, ep = this->shared_from_this()](auto param) {
-    return ::ucp_tag_send_nbx(ep->ep_, buffer, length, tag, param);
+  return send_awaitable([=, ep = ep_](auto param) {
+    return ::ucp_tag_send_nbx(ep, buffer, length, tag, param);
   });
 }
 
 tag_recv_awaitable endpoint::tag_recv(void *buffer, size_t length,
                                       ucp_tag_t tag, ucp_tag_t tag_mask) {
-  return tag_recv_awaitable([=, ep = this->shared_from_this()](auto param) {
-    return ::ucp_tag_recv_nbx(ep->worker_ptr()->handle(), buffer, length, tag,
-                              tag_mask, param);
+  return tag_recv_awaitable([=, worker = worker_->worker_](auto param) {
+    return ::ucp_tag_recv_nbx(worker, buffer, length, tag, tag_mask, param);
   });
 }
 
 send_awaitable endpoint::rma_put(void const *buffer, size_t length,
                                  uint64_t raddr, ucp_rkey_h rkey) {
-  return send_awaitable([=, ep = this->shared_from_this()](auto param) {
-    return ::ucp_put_nbx(ep->ep_, buffer, length, raddr, rkey, param);
+  return send_awaitable([=, ep = ep_](auto param) {
+    return ::ucp_put_nbx(ep, buffer, length, raddr, rkey, param);
   });
 }
 
 send_awaitable endpoint::rma_get(void *buffer, size_t length, uint64_t raddr,
                                  ucp_rkey_h rkey) {
-  return send_awaitable([=, ep = this->shared_from_this()](auto param) {
-    return ::ucp_get_nbx(ep->ep_, buffer, length, raddr, rkey, param);
+  return send_awaitable([=, ep = ep_](auto param) {
+    return ::ucp_get_nbx(ep, buffer, length, raddr, rkey, param);
   });
 }
 
 send_awaitable endpoint::flush() {
-  return send_awaitable([ep = this->shared_from_this()](auto param) {
-    return ::ucp_ep_flush_nbx(ep->ep_, param);
-  });
+  return send_awaitable(
+      [ep = ep_](auto param) { return ::ucp_ep_flush_nbx(ep, param); });
 }
 
 send_awaitable endpoint::close() {
-  return send_awaitable([ep = this->shared_from_this()](auto param) {
-    return ::ucp_ep_close_nbx(ep->ep_, param);
-  });
+  return send_awaitable(
+      [ep = ep_](auto param) { return ::ucp_ep_close_nbx(ep, param); });
 }
 
 endpoint::~endpoint() {}
