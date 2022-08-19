@@ -25,7 +25,7 @@ protected:
   ucs_status_t status_;
   base_awaitable() : h_(nullptr), status_(UCS_OK) {}
   bool check_request_ready(ucs_status_ptr_t request) {
-    if (UCS_PTR_IS_PTR(request)) {
+    if (UCS_PTR_IS_PTR(request)) [[unlikely]] {
       status_ = ::ucp_request_check_status(request);
     } else if (UCS_PTR_IS_ERR(request)) [[unlikely]] {
       status_ = UCS_PTR_STATUS(request);
@@ -33,7 +33,8 @@ protected:
       return true;
     }
 
-    return status_ != UCS_INPROGRESS;
+    status_ = UCS_OK;
+    return true;
   }
 };
 
@@ -59,7 +60,7 @@ public:
 
   bool await_suspend(std::coroutine_handle<> h) {
     h_ = h;
-    return true;
+    return status_ == UCS_INPROGRESS;
   }
 
   void await_resume() const { check_ucs_status(status_, "operation failed"); }
@@ -258,7 +259,7 @@ public:
 
   bool await_suspend(std::coroutine_handle<> h) {
     h_ = h;
-    return true;
+    return status_ == UCS_INPROGRESS;
   }
 
   size_t await_resume() const {
@@ -312,7 +313,7 @@ public:
 
   bool await_suspend(std::coroutine_handle<> h) {
     h_ = h;
-    return true;
+    return status_ == UCS_INPROGRESS;
   }
 
   std::pair<size_t, ucp_tag_t> await_resume() const {
