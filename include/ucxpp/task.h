@@ -85,7 +85,7 @@ template <class T> struct task {
     if (!detached_) {
       if (!h_.done()) {
         h_.promise().set_detached_task(h_);
-        get_future().wait();
+        get_future().get();
       } else {
         h_.destroy();
       }

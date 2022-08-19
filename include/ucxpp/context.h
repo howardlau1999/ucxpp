@@ -35,6 +35,8 @@ public:
     builder &enable_stream();
     builder &enable_am();
     builder &enable_rma();
+    builder &enable_amo32();
+    builder &enable_amo64();
   };
   context(uint64_t features, bool print_config);
   ucp_context_h handle();

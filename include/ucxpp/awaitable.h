@@ -1,11 +1,13 @@
 #pragma once
 
 #include <atomic>
+#include <cassert>
 #include <coroutine>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <thread>
+#include <type_traits>
 #include <ucs/type/status.h>
 
 #include <ucp/api/ucp.h>
@@ -14,9 +16,6 @@
 #include "ucxpp/error.h"
 
 #include "ucxpp/detail/debug.h"
-struct request_context {
-  void *awaitable;
-};
 
 namespace ucxpp {
 
@@ -40,7 +39,7 @@ protected:
 template <class Derived> class send_awaitable : public base_awaitable {
 public:
   static void send_cb(void *request, ucs_status_t status, void *user_data) {
-    auto self = static_cast<Derived *>(user_data);
+    auto self = reinterpret_cast<Derived *>(user_data);
     self->status_ = status;
     ::ucp_request_free(request);
 
@@ -146,6 +145,43 @@ public:
   }
 };
 
+template <class T>
+class rma_atomic_awaitable : public send_awaitable<rma_atomic_awaitable<T>> {
+  static_assert(sizeof(T) == 4 || sizeof(T) == 8, "Only 4-byte and 8-byte "
+                                                  "integers are supported");
+  ucp_ep_h ep_;
+  ucp_atomic_op_t const op_;
+  void const *buffer_;
+  uint64_t remote_addr_;
+  ucp_rkey_h rkey_;
+  void *reply_buffer_;
+  friend class send_awaitable<rma_atomic_awaitable<T>>;
+
+public:
+  rma_atomic_awaitable(ucp_ep_h ep, ucp_atomic_op_t const op,
+                       void const *buffer, uint64_t remote_addr,
+                       ucp_rkey_h rkey, void *reply_buffer = nullptr)
+      : ep_(ep), op_(op), buffer_(buffer), remote_addr_(remote_addr),
+        rkey_(rkey), reply_buffer_(reply_buffer) {
+    if (op == UCP_ATOMIC_OP_SWAP || op == UCP_ATOMIC_OP_CSWAP) {
+      assert(reply_buffer != nullptr);
+    }
+  }
+
+  bool await_ready() noexcept {
+    auto send_param = this->build_param();
+    send_param.op_attr_mask |= UCP_OP_ATTR_FIELD_DATATYPE;
+    send_param.datatype = ucp_dt_make_contig(sizeof(T));
+    if (reply_buffer_ != nullptr) {
+      send_param.op_attr_mask |= UCP_OP_ATTR_FIELD_REPLY_BUFFER;
+      send_param.reply_buffer = reply_buffer_;
+    }
+    auto request = ::ucp_atomic_op_nbx(ep_, op_, buffer_, 1, remote_addr_,
+                                       rkey_, &send_param);
+    return this->check_request_ready(request);
+  }
+};
+
 class ep_flush_awaitable : public send_awaitable<ep_flush_awaitable> {
   ucp_ep_h ep_;
   friend class send_awaitable;
@@ -217,8 +253,8 @@ public:
         UCP_OP_ATTR_FIELD_CALLBACK | UCP_OP_ATTR_FIELD_USER_DATA;
     stream_recv_param.cb.recv_stream = &stream_recv_cb;
     stream_recv_param.user_data = this;
-    auto request =
-        ::ucp_stream_send_nbx(ep_, buffer_, length_, &stream_recv_param);
+    auto request = ::ucp_stream_recv_nbx(ep_, buffer_, length_, &received_,
+                                         &stream_recv_param);
     return check_request_ready(request);
   }
 

@@ -35,6 +35,16 @@ set(UCXPP_SOURCE_FILES
 
 add_library(ucxpp STATIC ${UCXPP_SOURCE_FILES})
 set(UCXPP_LINK_LIBRARIES ucx::ucp ucx::uct ucx::ucs Threads::Threads)
+list(APPEND
+  UCXPP_COMPILE_OPTIONS
+  PUBLIC
+  -flto
+)
+list(APPEND
+  UCXPP_LINK_OPTIONS
+  PUBLIC
+  -flto
+)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES Clang)
   list(APPEND

@@ -1,10 +1,13 @@
 #include "ucxpp/memory.h"
 
 #include <cstddef>
+#include <cstdint>
+#include <memory>
 #include <utility>
 
 #include <ucp/api/ucp.h>
 
+#include "ucxpp/endpoint.h"
 #include "ucxpp/error.h"
 
 namespace ucxpp {
@@ -31,7 +34,7 @@ local_memory_handle::register_mem(std::shared_ptr<context> ctx, void *address,
   return local_memory_handle(ctx, mem);
 }
 
-packed_memory_rkey local_memory_handle::pack_rkey() {
+packed_memory_rkey local_memory_handle::pack_rkey() const {
   void *buffer;
   size_t length;
   check_ucs_status(::ucp_rkey_pack(ctx_->context_, mem_, &buffer, &length),
@@ -39,7 +42,7 @@ packed_memory_rkey local_memory_handle::pack_rkey() {
   return packed_memory_rkey(buffer, length);
 }
 
-ucp_mem_h local_memory_handle::handle() { return mem_; }
+ucp_mem_h local_memory_handle::handle() const { return mem_; }
 
 local_memory_handle::~local_memory_handle() {
   if (mem_ != nullptr) {
@@ -68,17 +71,42 @@ packed_memory_rkey::~packed_memory_rkey() {
 
 remote_memory_handle::remote_memory_handle(std::shared_ptr<endpoint> endpoint,
                                            void const *packed_rkey_buffer)
-    : endpoint_(endpoint) {
+    : endpoint_(endpoint), ep_(endpoint->handle()) {
   check_ucs_status(
-      ::ucp_ep_rkey_unpack(endpoint_->ep_, packed_rkey_buffer, &rkey_),
+      ::ucp_ep_rkey_unpack(endpoint_->handle(), packed_rkey_buffer, &rkey_),
       "failed to unpack memory");
 }
 
 remote_memory_handle::remote_memory_handle(remote_memory_handle &&other)
     : endpoint_(std::move(other.endpoint_)),
+      ep_(std::exchange(other.ep_, nullptr)),
       rkey_(std::exchange(other.rkey_, nullptr)) {}
 
-ucp_rkey_h remote_memory_handle::handle() { return rkey_; }
+std::shared_ptr<endpoint> remote_memory_handle::endpoint_ptr() const {
+  return endpoint_;
+}
+
+ucp_rkey_h remote_memory_handle::handle() const { return rkey_; }
+
+rma_put_awaitable remote_memory_handle::put(void const *buffer, size_t length,
+                                            uint64_t raddr) const {
+  return rma_put_awaitable(ep_, buffer, length, raddr, rkey_);
+}
+
+rma_get_awaitable remote_memory_handle::get(void *buffer, size_t length,
+                                            uint64_t raddr) const {
+  return rma_get_awaitable(ep_, buffer, length, raddr, rkey_);
+}
+
+rma_put_awaitable remote_memory_handle::write(void const *buffer, size_t length,
+                                              uint64_t raddr) const {
+  return rma_put_awaitable(ep_, buffer, length, raddr, rkey_);
+}
+
+rma_get_awaitable remote_memory_handle::read(void *buffer, size_t length,
+                                             uint64_t raddr) const {
+  return rma_get_awaitable(ep_, buffer, length, raddr, rkey_);
+}
 
 remote_memory_handle::~remote_memory_handle() {
   if (rkey_ != nullptr) {

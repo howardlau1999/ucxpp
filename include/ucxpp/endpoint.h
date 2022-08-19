@@ -12,6 +12,7 @@
 #include "ucxpp/address.h"
 #include "ucxpp/awaitable.h"
 #include "ucxpp/error.h"
+#include "ucxpp/memory.h"
 #include "ucxpp/socket/tcp_connection.h"
 #include "ucxpp/task.h"
 #include "ucxpp/worker.h"
@@ -30,24 +31,23 @@ class endpoint : public noncopyable,
 
 public:
   endpoint(std::shared_ptr<worker> worker, remote_address const &peer);
-  std::shared_ptr<worker> worker_ptr();
-  void print();
+  std::shared_ptr<worker> worker_ptr() const;
+  void print() const;
+  ucp_ep_h handle() const;
+
   static task<std::shared_ptr<endpoint>>
   from_tcp_connection(socket::tcp_connection &conncetion,
                       std::shared_ptr<worker> worker);
 
-  stream_send_awaitable stream_send(void const *buffer, size_t length);
-  stream_recv_awaitable stream_recv(void *buffer, size_t length);
-  tag_send_awaitable tag_send(void const *buffer, size_t length, ucp_tag_t tag);
+  stream_send_awaitable stream_send(void const *buffer, size_t length) const;
+  stream_recv_awaitable stream_recv(void *buffer, size_t length) const;
+  tag_send_awaitable tag_send(void const *buffer, size_t length,
+                              ucp_tag_t tag) const;
   tag_recv_awaitable tag_recv(void *buffer, size_t length, ucp_tag_t tag,
-                              ucp_tag_t tag_mask = 0xFFFFFFFFFFFFFFFF);
-  rma_put_awaitable rma_put(void const *buffer, size_t length, uint64_t raddr,
-                            ucp_rkey_h rkey);
-  rma_get_awaitable rma_get(void *buffer, size_t length, uint64_t raddr,
-                            ucp_rkey_h rkey);
-  ep_flush_awaitable flush();
-  ep_close_awaitable close();
-  ucp_ep_h handle();
+                              ucp_tag_t tag_mask = 0xFFFFFFFFFFFFFFFF) const;
+
+  ep_flush_awaitable flush() const;
+  ep_close_awaitable close() const;
 
   ~endpoint();
 };

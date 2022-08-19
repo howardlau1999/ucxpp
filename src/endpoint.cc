@@ -26,8 +26,6 @@ endpoint::endpoint(std::shared_ptr<worker> worker, remote_address const &peer)
                    "failed to create ep");
 }
 
-std::shared_ptr<worker> endpoint::worker_ptr() { return worker_; }
-
 task<std::shared_ptr<endpoint>>
 endpoint::from_tcp_connection(socket::tcp_connection &conncetion,
                               std::shared_ptr<worker> worker) {
@@ -59,41 +57,34 @@ endpoint::from_tcp_connection(socket::tcp_connection &conncetion,
   co_return std::make_shared<endpoint>(worker, remote_addr);
 }
 
-void endpoint::print() { ::ucp_ep_print_info(ep_, stdout); }
+std::shared_ptr<worker> endpoint::worker_ptr() const { return worker_; }
 
-ucp_ep_h endpoint::handle() { return ep_; }
+void endpoint::print() const { ::ucp_ep_print_info(ep_, stdout); }
 
-stream_send_awaitable endpoint::stream_send(void const *buffer, size_t length) {
+ucp_ep_h endpoint::handle() const { return ep_; }
+
+stream_send_awaitable endpoint::stream_send(void const *buffer,
+                                            size_t length) const {
   return stream_send_awaitable(ep_, buffer, length);
 }
 
-stream_recv_awaitable endpoint::stream_recv(void *buffer, size_t length) {
+stream_recv_awaitable endpoint::stream_recv(void *buffer, size_t length) const {
   return stream_recv_awaitable(ep_, buffer, length);
 }
 
 tag_send_awaitable endpoint::tag_send(void const *buffer, size_t length,
-                                      ucp_tag_t tag) {
+                                      ucp_tag_t tag) const {
   return tag_send_awaitable(ep_, buffer, length, tag);
 }
 
 tag_recv_awaitable endpoint::tag_recv(void *buffer, size_t length,
-                                      ucp_tag_t tag, ucp_tag_t tag_mask) {
+                                      ucp_tag_t tag, ucp_tag_t tag_mask) const {
   return tag_recv_awaitable(worker_->worker_, buffer, length, tag, tag_mask);
 }
 
-rma_put_awaitable endpoint::rma_put(void const *buffer, size_t length,
-                                    uint64_t raddr, ucp_rkey_h rkey) {
-  return rma_put_awaitable(ep_, buffer, length, raddr, rkey);
-}
+ep_flush_awaitable endpoint::flush() const { return ep_flush_awaitable(ep_); }
 
-rma_get_awaitable endpoint::rma_get(void *buffer, size_t length, uint64_t raddr,
-                                    ucp_rkey_h rkey) {
-  return rma_get_awaitable(ep_, buffer, length, raddr, rkey);
-}
-
-ep_flush_awaitable endpoint::flush() { return ep_flush_awaitable(ep_); }
-
-ep_close_awaitable endpoint::close() { return ep_close_awaitable(ep_); }
+ep_close_awaitable endpoint::close() const { return ep_close_awaitable(ep_); }
 
 endpoint::~endpoint() {}
 
