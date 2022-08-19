@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <coroutine>
 #include <cstring>
 #include <endian.h>
 #include <iomanip>
@@ -25,6 +26,14 @@ size_t gMsgSize = 65536;
 static std::atomic_size_t gCounter = 0;
 static size_t gLastCounter = 0;
 auto gLastTick = std::chrono::high_resolution_clock::now();
+
+std::atomic<std::coroutine_handle<>> gCoro;
+
+struct thread_switcher {
+  bool await_ready() const noexcept { return false; }
+  void await_suspend(std::coroutine_handle<> coro) noexcept { gCoro = coro; }
+  void await_resume() noexcept {}
+};
 
 static void bind_cpu(int core) {
   cpu_set_t cpuset;
@@ -59,6 +68,7 @@ ucxpp::task<void> sender(std::shared_ptr<ucxpp::endpoint> ep) {
 
 ucxpp::task<void> client(ucxpp::connector connector) {
   auto ep = co_await connector.connect();
+  co_await thread_switcher{};
   ep->print();
 
   {
@@ -85,6 +95,7 @@ ucxpp::task<void> receiver(std::shared_ptr<ucxpp::endpoint> ep) {
 
 ucxpp::task<void> server(ucxpp::acceptor acceptor) {
   auto ep = co_await acceptor.accept();
+  co_await thread_switcher{};
   ep->print();
 
   {
@@ -102,8 +113,9 @@ ucxpp::task<void> server(ucxpp::acceptor acceptor) {
 int main(int argc, char *argv[]) {
   auto ctx = ucxpp::context::builder().enable_tag().enable_wakeup().build();
   auto loop = ucxpp::socket::event_loop::new_loop();
-  auto worker = std::make_shared<ucxpp::worker>(ctx, loop);
+  auto worker = std::make_shared<ucxpp::worker>(ctx);
   bool stopped = false;
+  auto looper = std::thread([&]() { loop->loop(); });
   auto reporter = std::thread([&stopped]() {
     bind_cpu(0);
     using namespace std::literals::chrono_literals;
@@ -133,16 +145,18 @@ int main(int argc, char *argv[]) {
     std::cout << "Usage: " << argv[0] << " <host> <port> <size>" << std::endl;
   }
   bind_cpu(5);
-  bool close_triggered = false;
   while (worker.use_count() > 1) {
     while (worker->progress()) {
       continue;
     }
-    loop->poll(close_triggered);
+    if (auto coro = gCoro.load(); coro) {
+      gCoro = nullptr;
+      coro.resume();
+    }
   }
   stopped = true;
   loop->close();
-  loop->poll(close_triggered);
+  looper.join();
   reporter.join();
   return 0;
 }
