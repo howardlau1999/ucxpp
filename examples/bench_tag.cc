@@ -73,7 +73,7 @@ ucxpp::task<void> server(ucxpp::acceptor acceptor) {
 int main(int argc, char *argv[]) {
   auto ctx = ucxpp::context::builder().enable_tag().enable_wakeup().build();
   auto loop = ucxpp::socket::event_loop::new_loop();
-  auto worker = std::make_shared<ucxpp::worker>(ctx, loop);
+  auto worker = std::make_shared<ucxpp::worker>(ctx);
   bool stopped = false;
   auto reporter = std::thread([&stopped]() {
     using namespace std::literals::chrono_literals;
@@ -99,6 +99,9 @@ int main(int argc, char *argv[]) {
   }
   bool close_triggered = false;
   while (worker.use_count() > 1) {
+    while (worker->progress()) {
+      continue;
+    }
     loop->poll(close_triggered);
   }
   stopped = true;
