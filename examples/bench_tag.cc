@@ -115,7 +115,10 @@ int main(int argc, char *argv[]) {
   auto loop = ucxpp::socket::event_loop::new_loop();
   auto worker = std::make_shared<ucxpp::worker>(ctx);
   bool stopped = false;
-  auto looper = std::thread([&]() { loop->loop(); });
+  auto looper = std::thread([&]() {
+    bind_cpu(0);
+    loop->loop();
+  });
   auto reporter = std::thread([&stopped]() {
     bind_cpu(0);
     using namespace std::literals::chrono_literals;
