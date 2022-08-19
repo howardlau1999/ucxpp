@@ -43,8 +43,9 @@ local_memory_handle::allocate_mem(std::shared_ptr<context> ctx, size_t length) {
   map_params.address = nullptr;
   map_params.length = length;
   map_params.flags = UCP_MEM_MAP_ALLOCATE;
-  map_params.field_mask =
-      UCP_MEM_MAP_PARAM_FIELD_ADDRESS | UCP_MEM_MAP_PARAM_FIELD_LENGTH;
+  map_params.field_mask = UCP_MEM_MAP_PARAM_FIELD_ADDRESS |
+                          UCP_MEM_MAP_PARAM_FIELD_LENGTH |
+                          UCP_MEM_MAP_PARAM_FIELD_FLAGS;
   check_ucs_status(::ucp_mem_map(ctx->context_, &map_params, &mem),
                    "failed to map memory");
   attr.field_mask = UCP_MEM_ATTR_FIELD_ADDRESS;
