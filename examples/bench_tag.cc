@@ -33,9 +33,8 @@ ucxpp::task<void> client(ucxpp::connector connector) {
   ep->print();
 
   {
-    std::vector<ucxpp::task<void>> tasks;
     for (size_t i = 0; i < kConcurrency; ++i) {
-      tasks.emplace_back(sender(ep));
+      sender(ep).detach();
     }
   }
 
@@ -60,9 +59,8 @@ ucxpp::task<void> server(ucxpp::acceptor acceptor) {
   ep->print();
 
   {
-    std::vector<ucxpp::task<void>> tasks;
     for (size_t i = 0; i < kConcurrency; ++i) {
-      tasks.emplace_back(receiver(ep));
+      receiver(ep).detach();
     }
   }
 
