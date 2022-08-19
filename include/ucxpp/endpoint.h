@@ -31,6 +31,7 @@ class endpoint : public noncopyable,
 
 public:
   endpoint(std::shared_ptr<worker> worker, remote_address const &peer);
+  static void error_cb(void *ep, ucp_ep_h ep_h, ucs_status_t status);
   std::shared_ptr<worker> worker_ptr() const;
   void print() const;
   ucp_ep_h handle() const;

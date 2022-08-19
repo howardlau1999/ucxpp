@@ -24,6 +24,8 @@ int channel::fd() { return fd_; }
 
 std::function<void()> channel::noop_callback = []() {};
 
+void channel::set_event_loop(std::shared_ptr<event_loop> loop) { loop_ = loop; }
+
 void channel::set_nonblocking(int fd) {
   int opts = fcntl(fd, F_GETFL);
   check_errno(opts, "failed to get fcntl flags");
@@ -62,6 +64,9 @@ void channel::set_readable_callback(callback_fn &&callback) {
 std::shared_ptr<event_loop> channel::loop() { return loop_; }
 
 channel::~channel() {
+  if (!loop_) {
+    return;
+  }
   loop_->deregister(*this);
   assert(fd_ > 0);
   if (auto rc = ::close(fd_); rc != 0) [[unlikely]] {

@@ -25,13 +25,15 @@ protected:
   ucs_status_t status_;
   base_awaitable() : h_(nullptr), status_(UCS_OK) {}
   bool check_request_ready(ucs_status_ptr_t request) {
-    status_ = ::ucp_request_check_status(request);
-    if (UCS_PTR_IS_ERR(status_)) [[unlikely]] {
+    if (UCS_PTR_IS_PTR(request)) {
+      status_ = ::ucp_request_check_status(request);
+    } else if (UCS_PTR_IS_ERR(request)) [[unlikely]] {
+      status_ = UCS_PTR_STATUS(request);
       UCXPP_LOG_ERROR("%s", ::ucs_status_string(status_));
       return true;
     }
 
-    return status_ == UCS_OK;
+    return status_ != UCS_INPROGRESS;
   }
 };
 

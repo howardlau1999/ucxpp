@@ -48,7 +48,8 @@ static inline std::string events_string(int events) {
 }
 
 event_loop::event_loop(size_t max_events)
-    : epoll_fd_(-1), close_event_fd_(-1), max_events_(max_events) {
+    : epoll_fd_(-1), close_event_fd_(-1), max_events_(max_events),
+      events_(max_events) {
   epoll_fd_ = ::epoll_create1(EPOLL_CLOEXEC);
   check_errno(epoll_fd_, "failed to create epoll fd");
   close_event_fd_ = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
@@ -111,50 +112,53 @@ void event_loop::deregister(socket::channel &channel) {
   }
 }
 
-void event_loop::loop() {
-  std::vector<struct epoll_event> events(max_events_);
-  bool close_triggered = false;
-  while (!close_triggered) {
-    int nr_events = ::epoll_wait(epoll_fd_, &events[0], max_events_, -1);
-    if (nr_events < 0 && errno == EINTR) [[unlikely]] {
+void event_loop::poll(bool &close_triggered) {
+  int nr_events = ::epoll_wait(epoll_fd_, &events_[0], max_events_, -1);
+  if (nr_events < 0 && errno == EINTR) [[unlikely]] {
+    return;
+  }
+  check_errno(nr_events, "failed to epoll wait");
+  for (int i = 0; i < nr_events; ++i) {
+    auto &event = events_[i];
+    auto fd = event.data.fd;
+    UCXPP_LOG_TRACE("fd: %d events: %s", fd,
+                    events_string(event.events).c_str());
+    if (event.data.fd == close_event_fd_) {
+      close_triggered = true;
       continue;
     }
-    check_errno(nr_events, "failed to epoll wait");
-    for (int i = 0; i < nr_events; ++i) {
-      auto &event = events[i];
-      auto fd = event.data.fd;
-      UCXPP_LOG_TRACE("fd: %d events: %s", fd,
-                      events_string(event.events).c_str());
-      if (event.data.fd == close_event_fd_) {
-        close_triggered = true;
-        continue;
-      }
-      auto channel = [&]() {
-        std::shared_lock lock(mutex_);
-        auto it = channels_.find(fd);
-        assert(it != channels_.end());
-        return it->second.lock();
-      }();
-      if (channel) {
-        if (event.events & EPOLLIN || event.events & EPOLLERR) {
-          channel->readable_callback();
-          if (event.events & EPOLLERR) {
-            std::lock_guard lock(mutex_);
-            channels_.erase(fd);
-          }
+    auto channel = [&]() {
+      std::shared_lock lock(mutex_);
+      auto it = channels_.find(fd);
+      assert(it != channels_.end());
+      return it->second.lock();
+    }();
+    if (channel) {
+      if (event.events & EPOLLIN || event.events & EPOLLERR) {
+        channel->readable_callback();
+        if (event.events & EPOLLERR) {
+          std::lock_guard lock(mutex_);
+          channels_.erase(fd);
         }
-        if (event.events & EPOLLOUT || event.events & EPOLLERR) {
-          channel->writable_callback();
-          if (event.events & EPOLLERR) {
-            std::lock_guard lock(mutex_);
-            channels_.erase(fd);
-          }
-        }
-      } else {
-        std::lock_guard lock(mutex_);
-        channels_.erase(fd);
       }
+      if (event.events & EPOLLOUT || event.events & EPOLLERR) {
+        channel->writable_callback();
+        if (event.events & EPOLLERR) {
+          std::lock_guard lock(mutex_);
+          channels_.erase(fd);
+        }
+      }
+    } else {
+      std::lock_guard lock(mutex_);
+      channels_.erase(fd);
     }
+  }
+}
+
+void event_loop::loop() {
+  bool close_triggered = false;
+  while (!close_triggered) {
+    poll(close_triggered);
   }
 }
 

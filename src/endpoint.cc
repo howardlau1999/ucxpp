@@ -17,11 +17,19 @@
 
 namespace ucxpp {
 
+void endpoint::error_cb(void *ep, ucp_ep_h ep_h, ucs_status_t status) {
+  UCXPP_LOG_ERROR("ep=%p ep_h=%p status=%s", ep, reinterpret_cast<void *>(ep_h),
+                  ::ucs_status_string(status));
+}
+
 endpoint::endpoint(std::shared_ptr<worker> worker, remote_address const &peer)
     : worker_(worker) {
   ucp_ep_params_t ep_params;
-  ep_params.field_mask = UCP_EP_PARAM_FIELD_REMOTE_ADDRESS;
+  ep_params.field_mask =
+      UCP_EP_PARAM_FIELD_REMOTE_ADDRESS | UCP_EP_PARAM_FIELD_ERR_HANDLER;
   ep_params.address = peer.get_address();
+  ep_params.err_handler.cb = &error_cb;
+  ep_params.err_handler.arg = this;
   check_ucs_status(::ucp_ep_create(worker_->worker_, &ep_params, &ep_),
                    "failed to create ep");
 }

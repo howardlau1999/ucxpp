@@ -26,8 +26,9 @@ private:
 
 public:
   static void set_nonblocking(int fd);
-  channel(int fd, std::shared_ptr<event_loop> loop);
+  channel(int fd, std::shared_ptr<event_loop> loop = nullptr);
   int fd();
+  void set_event_loop(std::shared_ptr<event_loop> loop);
   void set_nonblocking();
   void wait_readable();
   void wait_writable();

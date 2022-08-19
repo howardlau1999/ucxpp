@@ -20,6 +20,7 @@ class context : public std::enable_shared_from_this<context> {
   friend class worker;
   friend class local_memory_handle;
   ucp_context_h context_;
+  uint64_t features_;
 
 public:
   class builder {
@@ -39,7 +40,8 @@ public:
     builder &enable_amo64();
   };
   context(uint64_t features, bool print_config);
-  ucp_context_h handle();
+  uint64_t features() const;
+  ucp_context_h handle() const;
   ~context();
 };
 

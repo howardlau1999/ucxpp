@@ -1,5 +1,6 @@
 #include "ucxpp/context.h"
 
+#include <cstdint>
 #include <cstdio>
 #include <ucs/config/types.h>
 
@@ -56,7 +57,7 @@ context::builder &context::builder::enable_amo64() {
   return *this;
 }
 
-context::context(uint64_t features, bool print_config) {
+context::context(uint64_t features, bool print_config) : features_(features) {
   ucp_config_t *config;
   check_ucs_status(::ucp_config_read(NULL, NULL, &config),
                    "failed to read ucp config");
@@ -73,7 +74,9 @@ context::context(uint64_t features, bool print_config) {
   ::ucp_config_release(config);
 }
 
-ucp_context_h context::handle() { return context_; }
+uint64_t context::features() const { return features_; }
+
+ucp_context_h context::handle() const { return context_; }
 
 context::~context() { ::ucp_cleanup(context_); }
 

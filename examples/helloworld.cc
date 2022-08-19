@@ -9,6 +9,7 @@
 #include "ucxpp/context.h"
 #include "ucxpp/endpoint.h"
 #include "ucxpp/memory.h"
+#include "ucxpp/socket/channel.h"
 #include <ucxpp/ucxpp.h>
 
 constexpr ucp_tag_t kTestTag = 0xFD709394UL;
@@ -77,6 +78,7 @@ ucxpp::task<void> client(ucxpp::connector connector) {
   co_await atomic_mr.atomic_fetch_add(atomic_raddr, local_value, reply_value);
   std::cout << "Fetched and added on server: " << reply_value << std::endl;
   co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
+  co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
 
   /* Compare and Swap */
   local_value = reply_value + local_value;
@@ -85,30 +87,35 @@ ucxpp::task<void> client(ucxpp::connector connector) {
                                          reply_value);
   std::cout << "Compared and swapped on server: " << reply_value << std::endl;
   co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
+  co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
 
   /* Swap */
   local_value = 123;
   co_await atomic_mr.atomic_swap(atomic_raddr, local_value, reply_value);
   std::cout << "Swapped on server: " << reply_value << std::endl;
   co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
+  co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
 
   /* Fetch and And */
   local_value = 0xF;
   co_await atomic_mr.atomic_fetch_and(atomic_raddr, local_value, reply_value);
   std::cout << "Fetched and anded on server: " << reply_value << std::endl;
   co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
+  co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
 
   /* Fetch and Or */
   local_value = 0xF;
   co_await atomic_mr.atomic_fetch_or(atomic_raddr, local_value, reply_value);
   std::cout << "Fetched and ored on server: " << reply_value << std::endl;
   co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
+  co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
 
   /* Fetch and Xor */
   local_value = 0xF;
   co_await atomic_mr.atomic_fetch_xor(atomic_raddr, local_value, reply_value);
   std::cout << "Fetched and xored on server: " << reply_value << std::endl;
   co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
+  co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
 
   co_await ep->flush();
   co_await ep->close();
@@ -162,16 +169,27 @@ ucxpp::task<void> handle_endpoint(std::shared_ptr<ucxpp::endpoint> ep) {
 
   co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
   std::cout << "Fetched and added by client: " << value << std::endl;
+  co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
+
   co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
   std::cout << "Compared and Swapped by client: " << value << std::endl;
+  co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
+
   co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
   std::cout << "Swapped by client: " << value << std::endl;
+  co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
+
   co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
   std::cout << "Fetched and Anded by client: " << value << std::endl;
+  co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
+
   co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
   std::cout << "Fetched and Ored by client: " << value << std::endl;
+  co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
+
   co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
   std::cout << "Fetched and Xored by client: " << value << std::endl;
+  co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
 
   co_await ep->flush();
   co_await ep->close();
@@ -193,10 +211,10 @@ int main(int argc, char *argv[]) {
                  .enable_tag()
                  .enable_rma()
                  .enable_amo64()
+                 .enable_wakeup()
                  .build();
-  auto worker = std::make_shared<ucxpp::worker>(ctx);
   auto loop = ucxpp::socket::event_loop::new_loop();
-  auto looper = std::thread([loop]() { loop->loop(); });
+  auto worker = std::make_shared<ucxpp::worker>(ctx, loop);
   if (argc == 2) {
     auto listener = std::make_shared<ucxpp::socket::tcp_listener>(
         loop, "0.0.0.0", std::stoi(argv[1]));
@@ -209,10 +227,11 @@ int main(int argc, char *argv[]) {
   } else {
     std::cout << "Usage: " << argv[0] << " <host> <port>" << std::endl;
   }
+  bool close_triggered;
   while (worker.use_count() > 1) {
-    worker->progress();
+    loop->poll(close_triggered);
   }
   loop->close();
-  looper.join();
+  loop->poll(close_triggered);
   return 0;
 }
