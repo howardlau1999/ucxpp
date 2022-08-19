@@ -1,10 +1,14 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cstring>
 #include <endian.h>
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <pthread.h>
+#include <sched.h>
+#include <thread>
 #include <vector>
 
 #include <ucp/api/ucp_def.h>
@@ -21,6 +25,26 @@ size_t gMsgSize = 65536;
 static std::atomic_size_t gCounter = 0;
 static size_t gLastCounter = 0;
 auto gLastTick = std::chrono::high_resolution_clock::now();
+
+static void bind_cpu(int core) {
+  cpu_set_t cpuset;
+  if (auto rc =
+          ::pthread_getaffinity_np(::pthread_self(), sizeof(cpuset), &cpuset)) {
+    std::cerr << "pthread_getaffinity_np: " << ::strerror(errno) << std::endl;
+    return;
+  }
+  if (!CPU_ISSET(core, &cpuset)) {
+    std::cerr << "core " << core << " is not in affinity mask" << std::endl;
+    return;
+  }
+  CPU_ZERO(&cpuset);
+  CPU_SET(core, &cpuset);
+  if (auto rc = ::pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t),
+                                         &cpuset)) {
+    std::cerr << "pthread_setaffinity_np: " << ::strerror(errno) << std::endl;
+    return;
+  }
+}
 
 ucxpp::task<void> sender(std::shared_ptr<ucxpp::endpoint> ep) {
   auto [buffer, local_mr] = ucxpp::local_memory_handle::allocate_mem(
@@ -79,6 +103,7 @@ int main(int argc, char *argv[]) {
   auto worker = std::make_shared<ucxpp::worker>(ctx);
   bool stopped = false;
   auto reporter = std::thread([&stopped]() {
+    bind_cpu(0);
     using namespace std::literals::chrono_literals;
     while (!stopped) {
       auto tick = std::chrono::high_resolution_clock::now();
@@ -105,6 +130,7 @@ int main(int argc, char *argv[]) {
   } else {
     std::cout << "Usage: " << argv[0] << " <host> <port> <size>" << std::endl;
   }
+  bind_cpu(5);
   bool close_triggered = false;
   while (worker.use_count() > 1) {
     while (worker->progress()) {
