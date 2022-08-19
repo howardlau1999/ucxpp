@@ -126,7 +126,9 @@ int main(int argc, char *argv[]) {
       auto tick = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double> elapsed = tick - gLastTick;
       auto counter = gCounter.load(std::memory_order_relaxed);
-      std::cout << "IOPS: " << (counter - gLastCounter) / elapsed.count()
+      std::cout << "IOPS: "
+                << static_cast<uint64_t>((counter - gLastCounter) /
+                                         elapsed.count())
                 << std::endl;
       gLastCounter = gCounter;
       gLastTick = tick;
