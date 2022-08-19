@@ -81,13 +81,13 @@ int main(int argc, char *argv[]) {
   auto reporter = std::thread([&stopped]() {
     using namespace std::literals::chrono_literals;
     while (!stopped) {
-      std::chrono::duration<double> elapsed =
-          std::chrono::high_resolution_clock::now() - gLastTick;
+      auto tick = std::chrono::high_resolution_clock::now();
+      std::chrono::duration<double> elapsed = tick - gLastTick;
       auto counter = gCounter.load(std::memory_order_relaxed);
       std::cout << "IOPS: " << (counter - gLastCounter) / elapsed.count()
                 << std::endl;
       gLastCounter = gCounter;
-      gLastTick = std::chrono::high_resolution_clock::now();
+      gLastTick = tick;
       std::this_thread::sleep_for(1s);
     }
   });
