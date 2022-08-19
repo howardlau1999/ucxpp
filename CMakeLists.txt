@@ -39,11 +39,15 @@ list(APPEND
   UCXPP_COMPILE_OPTIONS
   PUBLIC
   -flto
+  PUBLIC
+  -fno-rtti
 )
 list(APPEND
   UCXPP_LINK_OPTIONS
   PUBLIC
   -flto
+  PUBLIC
+  -fno-rtti
 )
 
 if (CMAKE_CXX_COMPILER_ID MATCHES Clang)
