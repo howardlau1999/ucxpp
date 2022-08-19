@@ -17,7 +17,7 @@ constexpr ucp_tag_t kTestTag = 0xFD709394;
 constexpr size_t kConcurrency = 32;
 
 size_t gMsgSize = 65536;
-static size_t gCounter = 0;
+static std::atomic_size_t gCounter = 0;
 static size_t gLastCounter = 0;
 
 ucxpp::task<void> sender(std::shared_ptr<ucxpp::endpoint> ep) {
@@ -25,7 +25,7 @@ ucxpp::task<void> sender(std::shared_ptr<ucxpp::endpoint> ep) {
       ep->worker_ptr()->context_ptr(), gMsgSize);
   while (true) {
     co_await ep->tag_send(buffer, gMsgSize, kTestTag);
-    gCounter += 1;
+    gCounter.fetch_add(1, std::memory_order_relaxed);
   }
 }
 
@@ -51,7 +51,7 @@ ucxpp::task<void> receiver(std::shared_ptr<ucxpp::endpoint> ep) {
 
   while (true) {
     co_await ep->tag_recv(buffer, gMsgSize, kTestTag);
-    gCounter += 1;
+    gCounter.fetch_add(1, std::memory_order_relaxed);
   }
 }
 
@@ -79,7 +79,9 @@ int main(int argc, char *argv[]) {
   auto reporter = std::thread([&stopped]() {
     using namespace std::literals::chrono_literals;
     while (!stopped) {
-      std::cout << "IOPS: " << (gCounter - gLastCounter) << std::endl;
+      std::cout << "IOPS: "
+                << (gCounter.load(std::memory_order_relaxed) - gLastCounter)
+                << std::endl;
       gLastCounter = gCounter;
       std::this_thread::sleep_for(1s);
     }
