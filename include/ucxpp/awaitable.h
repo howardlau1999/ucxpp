@@ -21,11 +21,11 @@ namespace ucxpp {
 
 class base_awaitable {
 protected:
-  std::atomic<std::coroutine_handle<>> h_;
+  std::coroutine_handle<> h_;
   ucs_status_t status_;
   base_awaitable() : h_(nullptr), status_(UCS_OK) {}
   bool check_request_ready(ucs_status_ptr_t request) {
-    status_ = UCS_PTR_STATUS(request);
+    status_ = ::ucp_request_check_status(request);
     if (UCS_PTR_IS_ERR(status_)) [[unlikely]] {
       UCXPP_LOG_ERROR("%s", ::ucs_status_string(status_));
       return true;
@@ -42,10 +42,7 @@ public:
     auto self = reinterpret_cast<Derived *>(user_data);
     self->status_ = status;
     ::ucp_request_free(request);
-
-    while (!self->h_.load())
-      [[unlikely]] { std::this_thread::yield(); }
-    self->h_.load().resume();
+    self->h_.resume();
   }
 
   ucp_request_param_t build_param() {
@@ -243,9 +240,7 @@ public:
     self->status_ = status;
     self->received_ = received;
     ::ucp_request_free(request);
-    while (!self->h_.load())
-      [[unlikely]] { std::this_thread::yield(); }
-    self->h_.load().resume();
+    self->h_.resume();
   }
 
   bool await_ready() noexcept {
@@ -295,9 +290,7 @@ public:
     self->recv_info_.length = tag_info->length;
     self->recv_info_.sender_tag = tag_info->sender_tag;
     ::ucp_request_free(request);
-    while (!self->h_.load())
-      [[unlikely]] { std::this_thread::yield(); }
-    self->h_.load().resume();
+    self->h_.resume();
   }
 
   bool await_ready() noexcept {
