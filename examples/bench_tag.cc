@@ -102,7 +102,7 @@ ucxpp::task<void> server(ucxpp::acceptor acceptor) {
 int main(int argc, char *argv[]) {
   auto ctx = ucxpp::context::builder().enable_tag().enable_wakeup().build();
   auto loop = ucxpp::socket::event_loop::new_loop();
-  auto worker = std::make_shared<ucxpp::worker>(ctx);
+  auto worker = std::make_shared<ucxpp::worker>(ctx, loop);
   bool stopped = false;
   auto reporter = std::thread([&stopped]() {
     bind_cpu(0);
