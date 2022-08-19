@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <endian.h>
 #include <iomanip>
 #include <iostream>
@@ -19,6 +20,7 @@ constexpr size_t kConcurrency = 32;
 size_t gMsgSize = 65536;
 static std::atomic_size_t gCounter = 0;
 static size_t gLastCounter = 0;
+auto gLastTick = std::chrono::high_resolution_clock::now();
 
 ucxpp::task<void> sender(std::shared_ptr<ucxpp::endpoint> ep) {
   auto [buffer, local_mr] = ucxpp::local_memory_handle::allocate_mem(
@@ -79,10 +81,13 @@ int main(int argc, char *argv[]) {
   auto reporter = std::thread([&stopped]() {
     using namespace std::literals::chrono_literals;
     while (!stopped) {
-      std::cout << "IOPS: "
-                << (gCounter.load(std::memory_order_relaxed) - gLastCounter)
+      std::chrono::duration<double> elapsed =
+          std::chrono::high_resolution_clock::now() - gLastTick;
+      auto counter = gCounter.load(std::memory_order_relaxed);
+      std::cout << "IOPS: " << (counter - gLastCounter) / elapsed.count()
                 << std::endl;
       gLastCounter = gCounter;
+      gLastTick = std::chrono::high_resolution_clock::now();
       std::this_thread::sleep_for(1s);
     }
   });
