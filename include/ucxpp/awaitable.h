@@ -50,8 +50,9 @@ public:
 
   ucp_request_param_t build_param() {
     ucp_request_param_t send_param;
-    send_param.op_attr_mask =
-        UCP_OP_ATTR_FIELD_CALLBACK | UCP_OP_ATTR_FIELD_USER_DATA;
+    send_param.op_attr_mask = UCP_OP_ATTR_FIELD_CALLBACK |
+                              UCP_OP_ATTR_FIELD_USER_DATA |
+                              UCP_OP_ATTR_FLAG_MULTI_SEND;
     send_param.cb.send = &send_cb;
     send_param.user_data = this;
     return send_param;

@@ -6,6 +6,7 @@
 #include <utility>
 
 #include <ucp/api/ucp.h>
+#include <ucp/api/ucp_def.h>
 
 #include "ucxpp/endpoint.h"
 #include "ucxpp/error.h"
@@ -32,6 +33,23 @@ local_memory_handle::register_mem(std::shared_ptr<context> ctx, void *address,
                    "failed to map memory");
 
   return local_memory_handle(ctx, mem);
+}
+
+std::pair<void *, local_memory_handle>
+local_memory_handle::allocate_mem(std::shared_ptr<context> ctx, size_t length) {
+  ucp_mem_h mem;
+  ucp_mem_attr_t attr;
+  ucp_mem_map_params_t map_params;
+  map_params.address = nullptr;
+  map_params.length = length;
+  map_params.flags = UCP_MEM_MAP_ALLOCATE;
+  map_params.field_mask =
+      UCP_MEM_MAP_PARAM_FIELD_ADDRESS | UCP_MEM_MAP_PARAM_FIELD_LENGTH;
+  check_ucs_status(::ucp_mem_map(ctx->context_, &map_params, &mem),
+                   "failed to map memory");
+  attr.field_mask = UCP_MEM_ATTR_FIELD_ADDRESS;
+  check_ucs_status(::ucp_mem_query(mem, &attr), "failed to get memory address");
+  return std::make_pair(attr.address, local_memory_handle(ctx, mem));
 }
 
 packed_memory_rkey local_memory_handle::pack_rkey() const {

@@ -20,9 +20,10 @@ size_t gMsgSize = 65536;
 static std::atomic<size_t> gCounter = 0;
 
 ucxpp::task<void> sender(std::shared_ptr<ucxpp::endpoint> ep) {
-  std::vector<char> buffer(gMsgSize);
+  auto [buffer, local_mr] = ucxpp::local_memory_handle::allocate_mem(
+      ep->worker_ptr()->context_ptr(), gMsgSize);
   while (true) {
-    co_await ep->tag_send(&buffer[0], gMsgSize, kTestTag);
+    co_await ep->tag_send(buffer, gMsgSize, kTestTag);
     gCounter.fetch_add(1, std::memory_order_seq_cst);
   }
 }
@@ -45,10 +46,11 @@ ucxpp::task<void> client(ucxpp::connector connector) {
 }
 
 ucxpp::task<void> receiver(std::shared_ptr<ucxpp::endpoint> ep) {
-  std::vector<char> buffer(gMsgSize);
+  auto [buffer, local_mr] = ucxpp::local_memory_handle::allocate_mem(
+      ep->worker_ptr()->context_ptr(), gMsgSize);
 
   while (true) {
-    co_await ep->tag_recv(&buffer[0], gMsgSize, kTestTag);
+    co_await ep->tag_recv(buffer, gMsgSize, kTestTag);
     gCounter.fetch_add(1, std::memory_order_seq_cst);
   }
 }
