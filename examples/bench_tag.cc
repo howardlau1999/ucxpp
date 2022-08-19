@@ -29,7 +29,8 @@ auto gLastTick = std::chrono::high_resolution_clock::now();
 static void bind_cpu(int core) {
   cpu_set_t cpuset;
   if (auto rc =
-          ::pthread_getaffinity_np(::pthread_self(), sizeof(cpuset), &cpuset)) {
+          ::pthread_getaffinity_np(::pthread_self(), sizeof(cpuset), &cpuset);
+      rc != 0) {
     std::cerr << "pthread_getaffinity_np: " << ::strerror(errno) << std::endl;
     return;
   }
@@ -39,8 +40,9 @@ static void bind_cpu(int core) {
   }
   CPU_ZERO(&cpuset);
   CPU_SET(core, &cpuset);
-  if (auto rc = ::pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t),
-                                         &cpuset)) {
+  if (auto rc =
+          ::pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
+      rc != 0) {
     std::cerr << "pthread_setaffinity_np: " << ::strerror(errno) << std::endl;
     return;
   }
