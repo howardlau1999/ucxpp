@@ -20,10 +20,10 @@
 #include <ucxpp/ucxpp.h>
 
 constexpr ucp_tag_t kTestTag = 0xFD709394;
-constexpr size_t kConcurrency = 32;
+constexpr size_t kConcurrency = 1;
 
 size_t gMsgSize = 65536;
-static std::atomic_size_t gCounter = 0;
+static size_t gCounter = 0;
 static size_t gLastCounter = 0;
 auto gLastTick = std::chrono::system_clock::now();
 
@@ -62,7 +62,7 @@ ucxpp::task<void> sender(std::shared_ptr<ucxpp::endpoint> ep) {
       ep->worker_ptr()->context_ptr(), gMsgSize);
   while (true) {
     co_await ep->tag_send(buffer, gMsgSize, kTestTag);
-    gCounter.fetch_add(1, std::memory_order_relaxed);
+    gCounter++;
   }
 }
 
@@ -89,7 +89,7 @@ ucxpp::task<void> receiver(std::shared_ptr<ucxpp::endpoint> ep) {
 
   while (true) {
     co_await ep->tag_recv(buffer, gMsgSize, kTestTag);
-    gCounter.fetch_add(1, std::memory_order_relaxed);
+    gCounter++;
   }
 }
 
@@ -123,14 +123,14 @@ int main(int argc, char *argv[]) {
     bind_cpu(0);
     using namespace std::literals::chrono_literals;
     while (!stopped) {
+      auto counter = gCounter;
       auto tick = std::chrono::system_clock::now();
       std::chrono::duration<double> elapsed = tick - gLastTick;
-      auto counter = gCounter.load(std::memory_order_relaxed);
       std::cout << "IOPS: "
                 << static_cast<uint64_t>((counter - gLastCounter) /
                                          elapsed.count())
                 << std::endl;
-      gLastCounter = gCounter;
+      gLastCounter = counter;
       gLastTick = tick;
       std::this_thread::sleep_for(1s);
     }
