@@ -232,15 +232,17 @@ int main(int argc, char *argv[]) {
     return builder.build();
   }();
   auto loop = ucxpp::socket::event_loop::new_loop();
-  auto worker = std::make_shared<ucxpp::worker>(ctx);
+  auto worker = [&]() {
+    if (perf.epoll) {
+      return std::make_shared<ucxpp::worker>(ctx, loop);
+    }
+    return std::make_shared<ucxpp::worker>(ctx);
+  }();
   if (perf.core.has_value()) {
     bind_cpu(perf.core.value());
   } else {
     std::cerr << "Warning: no core specified, using all cores available"
               << std::endl;
-  }
-  if (perf.epoll) {
-    worker->register_loop(loop);
   }
 
   if (perf.server_address.empty()) {
