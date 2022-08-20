@@ -62,10 +62,8 @@ context::context(uint64_t features, bool print_config) : features_(features) {
   check_ucs_status(::ucp_config_read(NULL, NULL, &config),
                    "failed to read ucp config");
   ucp_params_t ucp_params;
-  ucp_params.field_mask =
-      UCP_PARAM_FIELD_FEATURES | UCP_PARAM_FIELD_MT_WORKERS_SHARED;
+  ucp_params.field_mask = UCP_PARAM_FIELD_FEATURES;
   ucp_params.features = features;
-  ucp_params.mt_workers_shared = 1;
   check_ucs_status(::ucp_init(&ucp_params, config, &context_),
                    "failed to init ucp");
   if (print_config) {
