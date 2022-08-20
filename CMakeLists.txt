@@ -80,7 +80,7 @@ if (UCXPP_LINK_OPTIONS)
 endif ()
 target_link_libraries(ucxpp ${UCXPP_LINK_LIBRARIES})
 
-set(UCXPP_EXAMPLES helloworld bench_tag bench_tag_c)
+set(UCXPP_EXAMPLES helloworld perftest)
 if (UCXPP_BUILD_EXAMPLES)
   foreach (EXAMPLE ${UCXPP_EXAMPLES})
     add_executable(${EXAMPLE} examples/${EXAMPLE}.cc)
