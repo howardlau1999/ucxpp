@@ -26,8 +26,8 @@ protected:
   base_awaitable() : h_(nullptr), status_(UCS_OK) {}
   bool check_request_ready(ucs_status_ptr_t request) {
     if (UCS_PTR_IS_PTR(request)) [[unlikely]] {
-      status_ = ::ucp_request_check_status(request);
-      return status_ != UCS_INPROGRESS;
+      status_ = UCS_INPROGRESS;
+      return false;
     } else if (UCS_PTR_IS_ERR(request)) [[unlikely]] {
       status_ = UCS_PTR_STATUS(request);
       UCXPP_LOG_ERROR("%s", ::ucs_status_string(status_));
