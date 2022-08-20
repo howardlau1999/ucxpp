@@ -2,10 +2,9 @@
 #include <atomic>
 #include <chrono>
 #include <coroutine>
+#include <cstdio>
 #include <cstring>
 #include <endian.h>
-#include <iomanip>
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <pthread.h>
@@ -61,16 +60,14 @@ void print_report(bool final = false) {
   auto elapsed = tick - g_last_tick;
   if (final) [[unlikely]] {
     std::chrono::duration<double> total_elapsed = tick - g_start;
-    std::cout << "----- Finished. -----" << std::endl;
-    std::cout << "Elapsed: " << total_elapsed.count() << "s" << std::endl;
-    std::cout << "Average IOPS: "
-              << static_cast<size_t>(counter / total_elapsed.count())
-              << std::endl;
-  } else if (elapsed.count() > 1e9) [[unlikely]] {
-    std::cout << "Current iterations: " << g_counter << ", IOPS: "
-              << static_cast<uint64_t>((counter - g_last_counter) * 1e9 /
-                                       elapsed.count())
-              << std::endl;
+    ::fprintf(stdout, "----- Finished -----");
+    ::fprintf(stdout, "Total elapsed: %.3fs\n", total_elapsed.count());
+    ::fprintf(
+        stdout, "Average IOPS: %zu\n",
+        static_cast<size_t>(counter * 1000000000 / total_elapsed.count()));
+  } else if (elapsed.count() > 1000000000) [[unlikely]] {
+    ::fprintf(stdout, "Current iterations: %zu, IOPS: %zu\n", counter,
+              (counter - g_last_counter) * 1000000000 / elapsed.count());
     g_last_counter = counter;
     g_last_tick = tick;
   }
@@ -81,11 +78,11 @@ static void bind_cpu(int core) {
   if (auto rc =
           ::pthread_getaffinity_np(::pthread_self(), sizeof(cpuset), &cpuset);
       rc != 0) {
-    std::cerr << "pthread_getaffinity_np: " << ::strerror(errno) << std::endl;
+    ::perror("failed to get original affinity");
     return;
   }
   if (!CPU_ISSET(core, &cpuset)) {
-    std::cerr << "core " << core << " is not in affinity mask" << std::endl;
+    ::fprintf(stderr, "core %d is not in affinity mask\n", core);
     return;
   }
   CPU_ZERO(&cpuset);
@@ -93,7 +90,7 @@ static void bind_cpu(int core) {
   if (auto rc =
           ::pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
       rc != 0) {
-    std::cerr << "pthread_setaffinity_np: " << ::strerror(errno) << std::endl;
+    ::perror("failed to set affinity");
     return;
   }
 }
@@ -116,7 +113,7 @@ ucxpp::task<void> client(ucxpp::connector connector, perf_context const &perf) {
   ep->print();
   g_connected = true;
 
-  std::cout << "Warming up..." << std::endl;
+  ::fprintf(stderr, "Warming up...\n");
   {
     auto tasks = std::vector<ucxpp::task<void>>();
     for (size_t i = 0; i < perf.concurrency; ++i) {
@@ -129,7 +126,7 @@ ucxpp::task<void> client(ucxpp::connector connector, perf_context const &perf) {
 
   reset_report();
   g_start = std::chrono::system_clock::now();
-  std::cout << "Running..." << std::endl;
+  ::fprintf(stderr, "Running...\n");
   {
     auto tasks = std::vector<ucxpp::task<void>>();
     for (size_t i = 0; i < perf.concurrency; ++i) {
@@ -164,7 +161,8 @@ ucxpp::task<void> server(ucxpp::acceptor acceptor, perf_context const &perf) {
   auto ep = co_await acceptor.accept();
   ep->print();
   g_connected = true;
-  std::cerr << "Warming up..." << std::endl;
+
+  ::fprintf(stderr, "Warming up...\n");
   {
     auto tasks = std::vector<ucxpp::task<void>>();
     for (size_t i = 0; i < perf.concurrency; ++i) {
@@ -175,7 +173,7 @@ ucxpp::task<void> server(ucxpp::acceptor acceptor, perf_context const &perf) {
     }
   }
 
-  std::cerr << "Running..." << std::endl;
+  ::fprintf(stderr, "Running...\n");
   reset_report();
   g_start = std::chrono::system_clock::now();
   {
@@ -195,19 +193,20 @@ ucxpp::task<void> server(ucxpp::acceptor acceptor, perf_context const &perf) {
   co_return;
 }
 
-void print_usage(char *argv0) {
-  std::cerr << "Usage: " << argv0 << "[server (empty for server-side)]"
-            << std::endl
-            << "-c\tSpecify the core\n"
-               "-o\tSpecifies concurrent requests (default: 1)\n"
-               "-n\tSpecifies number of iterations (default: 1000000)\n"
-               "-s\tSpecifies message size (default: 8)\n"
-               "-w\tSpecifies number of warmup iterations (default: 10000)\n"
-               "-e\tUse epoll for worker progress (default: false)\n"
-               "-p\tServer port (default 8888)\n";
+void print_usage(char const *argv0) {
+  ::fprintf(stderr,
+            "Usage: %s [options] \n-c\tSpecify the core\n"
+            "-o\tSpecifies concurrent requests (default: 1)\n"
+            "-n\tSpecifies number of iterations (default: 1000000)\n"
+            "-s\tSpecifies message size (default: 8)\n"
+            "-w\tSpecifies number of warmup iterations (default: 10000)\n"
+            "-e\tUse epoll for worker progress (default: false)\n"
+            "-p\tServer port (default 8888)\n",
+            argv0);
 }
 
 int main(int argc, char *argv[]) {
+  std::ios_base::sync_with_stdio(false);
   auto args = std::vector<std::string>(argv + 1, argv + argc);
   perf_context perf;
   for (size_t i = 0; i < args.size(); ++i) {
@@ -229,7 +228,7 @@ int main(int argc, char *argv[]) {
     } else if (args[i] == "-p") {
       perf.server_port = std::stoul(args[++i]);
     } else if (args[i][0] == '-') {
-      std::cerr << "unknown option: " << args[i] << std::endl;
+      ::fprintf(stderr, "unknown option: %s\n", args[i].c_str());
       return 1;
     } else {
       perf.server_address = args[i];
@@ -253,8 +252,8 @@ int main(int argc, char *argv[]) {
   if (perf.core.has_value()) {
     bind_cpu(perf.core.value());
   } else {
-    std::cerr << "Warning: no core specified, using all cores available"
-              << std::endl;
+    ::fprintf(stderr,
+              "Warning: no core specified, using all cores available\n");
   }
 
   if (perf.server_address.empty()) {
@@ -274,6 +273,7 @@ int main(int argc, char *argv[]) {
       loop->poll(dummy);
     }
     loop->close();
+    loop = nullptr;
     while (worker.use_count() > 1) {
       worker->progress();
     }
