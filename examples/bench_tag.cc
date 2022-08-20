@@ -156,6 +156,7 @@ int main(int argc, char *argv[]) {
     }
     gCoro.load().resume();
     gCoro = nullptr;
+    break;
   }
   while (worker.use_count() > 1) {
     worker->progress();
