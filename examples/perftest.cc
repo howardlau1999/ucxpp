@@ -45,18 +45,18 @@ bool g_connected = false;
 
 static size_t g_counter = 0;
 static size_t g_last_counter = 0;
-auto g_last_tick = std::chrono::system_clock::now();
+auto g_last_tick = std::chrono::steady_clock::now();
 decltype(g_last_tick) g_start;
 
 void reset_report() {
   g_counter = 0;
   g_last_counter = 0;
-  g_last_tick = std::chrono::system_clock::now();
+  g_last_tick = std::chrono::steady_clock::now();
 }
 
 void print_report(bool final = false) {
   auto counter = g_counter;
-  auto tick = std::chrono::system_clock::now();
+  auto tick = std::chrono::steady_clock::now();
   auto elapsed = tick - g_last_tick;
   if (final) [[unlikely]] {
     std::chrono::duration<double> total_elapsed = tick - g_start;
@@ -124,7 +124,7 @@ ucxpp::task<void> client(ucxpp::connector connector, perf_context const &perf) {
   }
 
   reset_report();
-  g_start = std::chrono::system_clock::now();
+  g_start = std::chrono::steady_clock::now();
   ::fprintf(stderr, "Running...\n");
   {
     auto tasks = std::vector<ucxpp::task<void>>();
@@ -174,7 +174,7 @@ ucxpp::task<void> server(ucxpp::acceptor acceptor, perf_context const &perf) {
 
   ::fprintf(stderr, "Running...\n");
   reset_report();
-  g_start = std::chrono::system_clock::now();
+  g_start = std::chrono::steady_clock::now();
   {
     std::vector<ucxpp::task<void>> tasks;
     for (size_t i = 0; i < perf.concurrency; ++i) {
