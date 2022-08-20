@@ -113,7 +113,7 @@ void event_loop::deregister(socket::channel &channel) {
 }
 
 void event_loop::poll(bool &close_triggered) {
-  int nr_events = ::epoll_wait(epoll_fd_, &events_[0], max_events_, 0);
+  int nr_events = ::epoll_wait(epoll_fd_, &events_[0], max_events_, 1);
   if (nr_events < 0 && errno == EINTR) [[unlikely]] {
     return;
   }

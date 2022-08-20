@@ -26,6 +26,7 @@ public:
   class builder {
     uint64_t features_;
     bool print_config_;
+    bool enable_mt_;
 
   public:
     builder();
@@ -38,8 +39,9 @@ public:
     builder &enable_rma();
     builder &enable_amo32();
     builder &enable_amo64();
+    builder &enable_mt();
   };
-  context(uint64_t features, bool print_config);
+  context(uint64_t features, bool print_config, bool enable_mt);
   uint64_t features() const;
   ucp_context_h handle() const;
   ~context();
