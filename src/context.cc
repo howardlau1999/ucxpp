@@ -18,7 +18,7 @@ std::shared_ptr<context> context::builder::build() {
   return std::make_shared<context>(features_, print_config_, enable_mt_);
 }
 
-context::builder context::builder::enable_print_config() {
+context::builder &context::builder::enable_print_config() {
   print_config_ = true;
   return *this;
 }

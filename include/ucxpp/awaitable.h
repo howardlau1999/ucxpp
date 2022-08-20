@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <thread>
 #include <type_traits>
 #include <ucs/type/status.h>
@@ -184,46 +185,35 @@ public:
   }
 };
 
+/* These awaitables are not on "hot" path so they can hold a shared_ptr */
+class endpoint;
 class ep_flush_awaitable : public send_awaitable<ep_flush_awaitable> {
-  ucp_ep_h ep_;
+  std::shared_ptr<endpoint const> endpoint_;
   friend class send_awaitable;
 
 public:
-  ep_flush_awaitable(ucp_ep_h ep) : ep_(ep) {}
-
-  bool await_ready() noexcept {
-    auto send_param = build_param();
-    auto request = ::ucp_ep_flush_nbx(ep_, &send_param);
-    return check_request_ready(request);
-  }
+  ep_flush_awaitable(std::shared_ptr<endpoint const> endpoint);
+  bool await_ready() noexcept;
 };
 
 class ep_close_awaitable : public send_awaitable<ep_close_awaitable> {
-  ucp_ep_h ep_;
+  std::shared_ptr<endpoint> endpoint_;
   friend class send_awaitable;
 
 public:
-  ep_close_awaitable(ucp_ep_h ep) : ep_(ep) {}
-
-  bool await_ready() noexcept {
-    auto send_param = build_param();
-    auto request = ::ucp_ep_close_nbx(ep_, &send_param);
-    return check_request_ready(request);
-  }
+  ep_close_awaitable(std::shared_ptr<endpoint> endpoint);
+  bool await_ready() noexcept;
 };
 
+class worker;
 class worker_flush_awaitable : public send_awaitable<worker_flush_awaitable> {
-  ucp_worker_h worker_;
+  std::shared_ptr<worker> worker_;
   friend class send_awaitable;
 
 public:
-  worker_flush_awaitable(ucp_worker_h worker) : worker_(worker) {}
+  worker_flush_awaitable(std::shared_ptr<worker> worker);
 
-  bool await_ready() noexcept {
-    auto send_param = build_param();
-    auto request = ::ucp_worker_flush_nbx(worker_, &send_param);
-    return check_request_ready(request);
-  }
+  bool await_ready() noexcept;
 };
 
 /* Common awaitable class for stream-recv-like callbacks */

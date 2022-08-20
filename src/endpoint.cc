@@ -90,10 +90,26 @@ tag_recv_awaitable endpoint::tag_recv(void *buffer, size_t length,
   return tag_recv_awaitable(worker_->worker_, buffer, length, tag, tag_mask);
 }
 
-ep_flush_awaitable endpoint::flush() const { return ep_flush_awaitable(ep_); }
+ep_flush_awaitable endpoint::flush() const {
+  return ep_flush_awaitable(this->shared_from_this());
+}
 
-ep_close_awaitable endpoint::close() const { return ep_close_awaitable(ep_); }
+ep_close_awaitable endpoint::close() {
+  return ep_close_awaitable(this->shared_from_this());
+}
 
-endpoint::~endpoint() {}
+void endpoint::close_cb(void *request, ucs_status_t status, void *user_data) {
+  UCXPP_LOG_DEBUG("endpoint closed request=%p status=%s user_data=%p", request,
+                  ::ucs_status_string(status), user_data);
+}
+
+endpoint::~endpoint() {
+  if (ep_ != nullptr && close_request_ == nullptr) {
+    ucp_request_param_t param;
+    param.op_attr_mask = UCP_OP_ATTR_FIELD_CALLBACK;
+    param.cb.send = &close_cb;
+    ::ucp_ep_close_nbx(ep_, &param);
+  }
+}
 
 } // namespace ucxpp
