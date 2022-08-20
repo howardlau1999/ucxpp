@@ -223,7 +223,14 @@ int main(int argc, char *argv[]) {
       perf.server_address = args[i];
     }
   }
-  auto ctx = ucxpp::context::builder().enable_tag().enable_wakeup().build();
+  auto ctx = [&]() {
+    auto builder = ucxpp::context::builder();
+    builder.enable_tag();
+    if (perf.epoll) {
+      builder.enable_wakeup();
+    }
+    return builder.build();
+  }();
   auto loop = ucxpp::socket::event_loop::new_loop();
   auto worker = std::make_shared<ucxpp::worker>(ctx);
   if (perf.core.has_value()) {
