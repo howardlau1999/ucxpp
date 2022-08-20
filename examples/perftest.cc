@@ -269,8 +269,9 @@ int main(int argc, char *argv[]) {
   }
 
   if (!perf.epoll) {
+    bool dummy;
     while (!g_connected) {
-      loop->loop();
+      loop->poll(dummy);
     }
     loop->close();
     while (worker.use_count() > 1) {
