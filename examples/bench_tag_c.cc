@@ -104,7 +104,8 @@ ucxpp::task<void> client(ucxpp::connector connector) {
   co_return;
 }
 
-void tag_recv_cb(void *request, ucs_status_t, ucp_tag_recv_info_t *, void *) {
+void tag_recv_cb(void *request, ucs_status_t, ucp_tag_recv_info_t const *,
+                 void *) {
   ::ucp_request_release(request);
   gOutstandingRecv--;
   gCounter.fetch_add(1, std::memory_order_relaxed);
@@ -127,7 +128,8 @@ ucxpp::task<void> server(ucxpp::acceptor acceptor) {
     }
 
     ucp_request_param_t recv_param;
-    recv_param.op_attr_mask = 0;
+    recv_param.op_attr_mask = UCP_OP_ATTR_FIELD_CALLBACK;
+    recv_param.cb.recv = tag_recv_cb;
     auto worker_h = ep->worker_ptr()->handle();
     while (true) {
       while (gOutstandingRecv >= kConcurrency) {
