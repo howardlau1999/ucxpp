@@ -200,7 +200,7 @@ void print_usage(char *argv0) {
             << std::endl
             << "-c\tSpecify the core\n"
                "-o\tSpecifies concurrent requests (default: 1)\n"
-               "-i\tSpecifies number of iterations (default: 1000000)\n"
+               "-n\tSpecifies number of iterations (default: 1000000)\n"
                "-s\tSpecifies message size (default: 8)\n"
                "-w\tSpecifies number of warmup iterations (default: 10000)\n"
                "-e\tUse epoll for worker progress (default: false)\n"
@@ -220,7 +220,7 @@ int main(int argc, char *argv[]) {
       perf.concurrency = std::stoul(args[++i]);
     } else if (args[i] == "-s") {
       perf.message_size = std::stoul(args[++i]);
-    } else if (args[i] == "-i") {
+    } else if (args[i] == "-n") {
       perf.iterations = std::stoul(args[++i]);
     } else if (args[i] == "-w") {
       perf.warmup_iterations = std::stoul(args[++i]);
