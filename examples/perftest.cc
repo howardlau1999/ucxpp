@@ -65,7 +65,7 @@ void print_report(bool final = false) {
     ::fprintf(stdout, "Average IOPS: %zu\n",
               static_cast<size_t>(counter / total_elapsed.count()));
   } else if (elapsed.count() > 1000000000) [[unlikely]] {
-    ::fprintf(stdout, "Current iterations: %zu, IOPS: %zu\n", counter,
+    ::fprintf(stdout, "%zu,%zu\n", counter,
               (counter - g_last_counter) * 1000000000 / elapsed.count());
     g_last_counter = counter;
     g_last_tick = tick;
