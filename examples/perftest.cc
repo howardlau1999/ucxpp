@@ -122,6 +122,9 @@ ucxpp::task<void> client(ucxpp::connector connector, perf_context const &perf) {
     for (size_t i = 0; i < perf.concurrency; ++i) {
       tasks.emplace_back(sender(ep, g_counter, true, perf));
     }
+    for (auto &task : tasks) {
+      co_await task;
+    }
   }
 
   reset_report();
@@ -131,6 +134,9 @@ ucxpp::task<void> client(ucxpp::connector connector, perf_context const &perf) {
     auto tasks = std::vector<ucxpp::task<void>>();
     for (size_t i = 0; i < perf.concurrency; ++i) {
       tasks.emplace_back(sender(ep, g_counter, false, perf));
+    }
+    for (auto &task : tasks) {
+      co_await task;
     }
   }
   print_report(true);
@@ -164,6 +170,9 @@ ucxpp::task<void> server(ucxpp::acceptor acceptor, perf_context const &perf) {
     for (size_t i = 0; i < perf.concurrency; ++i) {
       tasks.emplace_back(receiver(ep, g_counter, true, perf));
     }
+    for (auto &task : tasks) {
+      co_await task;
+    }
   }
 
   std::cerr << "Running..." << std::endl;
@@ -173,6 +182,9 @@ ucxpp::task<void> server(ucxpp::acceptor acceptor, perf_context const &perf) {
     std::vector<ucxpp::task<void>> tasks;
     for (size_t i = 0; i < perf.concurrency; ++i) {
       tasks.emplace_back(receiver(ep, g_counter, false, perf));
+    }
+    for (auto &task : tasks) {
+      co_await task;
     }
   }
   print_report(true);
