@@ -25,7 +25,7 @@ constexpr size_t kConcurrency = 32;
 size_t gMsgSize = 65536;
 static std::atomic_size_t gCounter = 0;
 static size_t gLastCounter = 0;
-auto gLastTick = std::chrono::high_resolution_clock::now();
+auto gLastTick = std::chrono::system_clock::now();
 
 std::atomic<std::coroutine_handle<>> gCoro;
 
@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
     bind_cpu(0);
     using namespace std::literals::chrono_literals;
     while (!stopped) {
-      auto tick = std::chrono::high_resolution_clock::now();
+      auto tick = std::chrono::system_clock::now();
       std::chrono::duration<double> elapsed = tick - gLastTick;
       auto counter = gCounter.load(std::memory_order_relaxed);
       std::cout << "IOPS: "
@@ -150,14 +150,14 @@ int main(int argc, char *argv[]) {
     std::cout << "Usage: " << argv[0] << " <host> <port> <size>" << std::endl;
   }
   bind_cpu(5);
-  while (worker.use_count() > 1) {
-    while (worker->progress()) {
+  while (auto coro = gCoro.load()) {
+    if (coro == nullptr)
       continue;
-    }
-    if (auto coro = gCoro.load(); coro) {
-      gCoro = nullptr;
-      coro.resume();
-    }
+    gCoro = nullptr;
+    coro.resume();
+  }
+  while (worker.use_count() > 1) {
+    worker->progress();
   }
   stopped = true;
   loop->close();

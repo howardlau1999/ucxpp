@@ -17,9 +17,13 @@
 #include <ucxpp/ucxpp.h>
 
 constexpr ucp_tag_t kTestTag = 0xFD709394;
+constexpr size_t kConcurrency = 32;
 
 size_t gMsgSize = 65536;
 static std::atomic<size_t> gCounter = 0;
+
+size_t gOutstandingSend = 0;
+size_t gOutstandingRecv = 0;
 
 static ucs_status_t ucp_perf_mem_alloc(std::shared_ptr<ucxpp::context> ctx,
                                        void **address_p, ucp_mem_h *memh_p) {
@@ -50,6 +54,12 @@ static ucs_status_t ucp_perf_mem_alloc(std::shared_ptr<ucxpp::context> ctx,
   return UCS_OK;
 }
 
+void tag_send_cb(void *request, ucs_status_t, void *) {
+  ::ucp_request_release(request);
+  gOutstandingSend--;
+  gCounter.fetch_add(1, std::memory_order_relaxed);
+}
+
 ucxpp::task<void> client(ucxpp::connector connector) {
   auto ep = co_await connector.connect();
 
@@ -69,26 +79,35 @@ ucxpp::task<void> client(ucxpp::connector connector) {
     auto ep_h = ep->handle();
     auto worker_h = ep->worker_ptr()->handle();
     ucp_request_param_t send_param;
-    send_param.op_attr_mask = UCP_OP_ATTR_FLAG_MULTI_SEND;
-    ucp_tag_recv_info_t info;
+    send_param.op_attr_mask =
+        UCP_OP_ATTR_FLAG_MULTI_SEND | UCP_OP_ATTR_FIELD_CALLBACK;
+    send_param.cb.send = tag_send_cb;
     while (true) {
+      while (gOutstandingSend >= kConcurrency) {
+        ::ucp_worker_progress(worker_h);
+      }
       auto request =
           ::ucp_tag_send_nbx(ep_h, buffer, gMsgSize, kTestTag, &send_param);
       if (UCS_PTR_IS_ERR(request)) {
-        std::cout << "error: " << ucs_status_string(UCS_PTR_STATUS(request))
-                  << std::endl;
-      } else if (UCS_PTR_IS_PTR(request)) {
-        while (::ucp_request_test(request, &info) == UCS_INPROGRESS) {
-          ::ucp_worker_progress(worker_h);
-        }
-        ::ucp_request_release(request);
+        std::cerr << "Failed to send: "
+                  << ucs_status_string(UCS_PTR_STATUS(request)) << std::endl;
+        break;
+      } else if (UCS_PTR_STATUS(request) == UCS_INPROGRESS) {
+        gOutstandingSend++;
+      } else {
+        gCounter.fetch_add(1, std::memory_order_relaxed);
       }
-      gCounter.fetch_add(1, std::memory_order_seq_cst);
     }
   });
   cli.detach();
 
   co_return;
+}
+
+void tag_recv_cb(void *request, ucs_status_t, ucp_tag_recv_info_t *, void *) {
+  ::ucp_request_release(request);
+  gOutstandingRecv--;
+  gCounter.fetch_add(1, std::memory_order_relaxed);
 }
 
 ucxpp::task<void> server(ucxpp::acceptor acceptor) {
@@ -109,22 +128,21 @@ ucxpp::task<void> server(ucxpp::acceptor acceptor) {
 
     ucp_request_param_t recv_param;
     recv_param.op_attr_mask = 0;
-    ucp_tag_recv_info_t recv_info;
     auto worker_h = ep->worker_ptr()->handle();
     while (true) {
+      while (gOutstandingRecv >= kConcurrency) {
+        ::ucp_worker_progress(worker_h);
+      }
       auto request = ::ucp_tag_recv_nbx(worker_h, buffer, gMsgSize, kTestTag,
                                         0xFFFFFFFFFFFFFFFF, &recv_param);
       if (UCS_PTR_IS_ERR(request)) {
         std::cout << "error: " << ucs_status_string(UCS_PTR_STATUS(request))
                   << std::endl;
       } else if (UCS_PTR_IS_PTR(request)) {
-        while (::ucp_tag_recv_request_test(request, &recv_info) ==
-               UCS_INPROGRESS) {
-          ::ucp_worker_progress(worker_h);
-        }
-        ::ucp_request_release(request);
+        gOutstandingRecv++;
+      } else {
+        gCounter.fetch_add(1, std::memory_order_seq_cst);
       }
-      gCounter.fetch_add(1, std::memory_order_seq_cst);
     }
   });
   srv.detach();
