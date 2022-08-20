@@ -60,8 +60,8 @@ void print_report(bool final = false) {
   auto elapsed = tick - g_last_tick;
   if (final) [[unlikely]] {
     std::chrono::duration<double> total_elapsed = tick - g_start;
-    ::fprintf(stdout, "----- Finished -----");
-    ::fprintf(stdout, "Total elapsed: %.3fs\n", total_elapsed.count());
+    ::fprintf(stdout, "----- Finished -----\n");
+    ::fprintf(stdout, "Total elapsed: %.6fs\n", total_elapsed.count());
     ::fprintf(stdout, "Average IOPS: %zu\n",
               static_cast<size_t>(counter / total_elapsed.count()));
   } else if (elapsed.count() > 1000000000) [[unlikely]] {
