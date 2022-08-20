@@ -150,11 +150,12 @@ int main(int argc, char *argv[]) {
     std::cout << "Usage: " << argv[0] << " <host> <port> <size>" << std::endl;
   }
   bind_cpu(5);
-  while (auto coro = gCoro.load()) {
-    if (coro == nullptr)
+  while (true) {
+    if (!gCoro.load()) {
       continue;
+    }
+    gCoro.load().resume();
     gCoro = nullptr;
-    coro.resume();
   }
   while (worker.use_count() > 1) {
     worker->progress();
