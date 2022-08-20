@@ -13,8 +13,9 @@
 namespace ucxpp {
 
 context::builder::builder() : features_(0), print_config_(false) {}
+
 std::shared_ptr<context> context::builder::build() {
-  return std::make_shared<context>(features_, print_config_);
+  return std::make_shared<context>(features_, print_config_, enable_mt_);
 }
 
 context::builder context::builder::enable_print_config() {
@@ -57,13 +58,23 @@ context::builder &context::builder::enable_amo64() {
   return *this;
 }
 
-context::context(uint64_t features, bool print_config) : features_(features) {
+context::builder &context::builder::enable_mt() {
+  enable_mt_ = true;
+  return *this;
+}
+
+context::context(uint64_t features, bool print_config, bool enable_mt)
+    : features_(features) {
   ucp_config_t *config;
   check_ucs_status(::ucp_config_read(NULL, NULL, &config),
                    "failed to read ucp config");
   ucp_params_t ucp_params;
   ucp_params.field_mask = UCP_PARAM_FIELD_FEATURES;
   ucp_params.features = features;
+  if (enable_mt) {
+    ucp_params.field_mask |= UCP_PARAM_FIELD_MT_WORKERS_SHARED;
+    ucp_params.mt_workers_shared = 1;
+  }
   check_ucs_status(::ucp_init(&ucp_params, config, &context_),
                    "failed to init ucp");
   if (print_config) {

@@ -20,7 +20,7 @@
 #include <ucxpp/ucxpp.h>
 
 constexpr ucp_tag_t kTestTag = 0xFD709394;
-constexpr size_t kConcurrency = 1;
+size_t gConcurrency = 1;
 
 size_t gMsgSize = 65536;
 static size_t gCounter = 0;
@@ -68,11 +68,10 @@ ucxpp::task<void> sender(std::shared_ptr<ucxpp::endpoint> ep) {
 
 ucxpp::task<void> client(ucxpp::connector connector) {
   auto ep = co_await connector.connect();
-  co_await thread_switcher{};
   ep->print();
 
   {
-    for (size_t i = 0; i < kConcurrency; ++i) {
+    for (size_t i = 0; i < gConcurrency; ++i) {
       sender(ep).detach();
     }
   }
@@ -95,11 +94,10 @@ ucxpp::task<void> receiver(std::shared_ptr<ucxpp::endpoint> ep) {
 
 ucxpp::task<void> server(ucxpp::acceptor acceptor) {
   auto ep = co_await acceptor.accept();
-  co_await thread_switcher{};
   ep->print();
 
   {
-    for (size_t i = 0; i < kConcurrency; ++i) {
+    for (size_t i = 0; i < gConcurrency; ++i) {
       receiver(ep).detach();
     }
   }
@@ -113,12 +111,8 @@ ucxpp::task<void> server(ucxpp::acceptor acceptor) {
 int main(int argc, char *argv[]) {
   auto ctx = ucxpp::context::builder().enable_tag().build();
   auto loop = ucxpp::socket::event_loop::new_loop();
-  auto worker = std::make_shared<ucxpp::worker>(ctx);
+  auto worker = std::make_shared<ucxpp::worker>(ctx, loop);
   bool stopped = false;
-  auto looper = std::thread([&]() {
-    bind_cpu(0);
-    loop->loop();
-  });
   auto reporter = std::thread([&stopped]() {
     bind_cpu(0);
     using namespace std::literals::chrono_literals;
@@ -135,35 +129,31 @@ int main(int argc, char *argv[]) {
       std::this_thread::sleep_for(1s);
     }
   });
-  if (argc == 3) {
+  if (argc == 4) {
     auto listener = std::make_shared<ucxpp::socket::tcp_listener>(
         loop, "0.0.0.0", std::stoi(argv[1]));
     auto acceptor = ucxpp::acceptor(worker, listener);
     gMsgSize = std::stoi(argv[2]);
+    gConcurrency = std::stoi(argv[3]);
     server(std::move(acceptor)).detach();
-  } else if (argc == 4) {
+  } else if (argc == 5) {
     auto connector =
         ucxpp::connector(worker, loop, argv[1], std::stoi(argv[2]));
     gMsgSize = std::stoi(argv[3]);
+    gConcurrency = std::stoi(argv[4]);
     client(std::move(connector)).detach();
   } else {
-    std::cout << "Usage: " << argv[0] << " <host> <port> <size>" << std::endl;
+    std::cout << "Usage: " << argv[0] << " <host> <port> <size> <concurrency>"
+              << std::endl;
   }
   bind_cpu(5);
-  while (true) {
-    if (!gCoro.load()) {
-      continue;
-    }
-    gCoro.load().resume();
-    gCoro = nullptr;
-    break;
-  }
+  bool dummy = false;
   while (worker.use_count() > 1) {
-    worker->progress();
+    loop->poll(dummy);
   }
   stopped = true;
   loop->close();
-  looper.join();
+  loop->poll(dummy);
   reporter.join();
   return 0;
 }
