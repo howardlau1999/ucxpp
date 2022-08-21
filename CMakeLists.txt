@@ -16,6 +16,11 @@ string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_LENGTH)
 add_definitions("-DSOURCE_PATH_LENGTH=${SOURCE_PATH_LENGTH}")
 
 option(UCXPP_BUILD_EXAMPLES "Build examples" ON)
+if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+  option(UCXPP_BUILD_EXAMPLES "Build examples" ON)
+else()
+  option(UCXPP_BUILD_EXAMPLES "Build examples" OFF)
+endif()
 
 include_directories(include)
 
