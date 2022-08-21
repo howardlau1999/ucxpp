@@ -29,7 +29,7 @@ worker::worker(std::shared_ptr<context> ctx) : ctx_(ctx), event_fd_(-1) {
   if (ctx_->features() & UCP_FEATURE_WAKEUP) {
     check_ucs_status(::ucp_worker_get_efd(worker_, &event_fd_),
                      "failed to get ucp worker event fd");
-    check_ucs_status(::ucp_worker_arm(worker_), "failed to arm ucp worker");
+    arm();
   }
 }
 
@@ -56,8 +56,7 @@ void worker::register_loop(std::shared_ptr<socket::event_loop> loop) {
         while (worker.progress()) {
           continue;
         }
-        check_ucs_status(::ucp_worker_arm(worker.worker_),
-                         "failed to arm ucp worker");
+        worker.arm();
         auto event_channel_ptr = event_channel.lock();
         if (event_channel_ptr) {
           event_channel_ptr->wait_readable();
@@ -82,10 +81,14 @@ local_address worker::get_address() {
 
 ucp_worker_h worker::handle() { return worker_; }
 
-bool worker::progress() { return ::ucp_worker_progress(worker_); }
+bool worker::progress() const { return ::ucp_worker_progress(worker_); }
 
-void worker::wait() {
+void worker::wait() const {
   check_ucs_status(::ucp_worker_wait(worker_), "failed to wait worker");
+}
+
+void worker::arm() const {
+  check_ucs_status(::ucp_worker_arm(worker_), "failed to arm worker");
 }
 
 worker_flush_awaitable worker::flush() {

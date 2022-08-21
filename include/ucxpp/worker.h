@@ -83,14 +83,20 @@ public:
    * @return true If progress was made
    * @return false If no progress was made
    */
-  bool progress();
+  bool progress() const;
 
   /**
    * @brief Wait for an event on the worker. It should be called only after a
    * call to progress() returns false.
    *
    */
-  void wait();
+  void wait() const;
+
+  /**
+   * @brief Arm the worker for next event notification.
+   *
+   */
+  void arm() const;
 
   /**
    * @brief Flush the worker
