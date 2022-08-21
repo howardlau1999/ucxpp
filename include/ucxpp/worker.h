@@ -11,7 +11,6 @@
 #include "ucxpp/address.h"
 #include "ucxpp/awaitable.h"
 #include "ucxpp/context.h"
-#include "ucxpp/socket/channel.h"
 
 namespace ucxpp {
 
@@ -25,10 +24,6 @@ class worker : public std::enable_shared_from_this<worker> {
   ucp_worker_h worker_;
   std::shared_ptr<context> ctx_;
   int event_fd_;
-  std::shared_ptr<socket::channel> event_channel_;
-
-  void register_loop(std::shared_ptr<socket::event_loop> loop);
-  std::shared_ptr<socket::channel> event_channel() const;
 
 public:
   /**
@@ -45,16 +40,6 @@ public:
    * @return int
    */
   int event_fd() const;
-
-  /**
-   * @brief Construct a new worker object and add it to a event loop. The wakeup
-   * feature must be enabled on the context.
-   *
-   * @param ctx UCX context
-   * @param loop Event loop
-   */
-  worker(std::shared_ptr<context> ctx,
-         std::shared_ptr<socket::event_loop> loop);
 
   /**
    * @brief Get the worker's context object

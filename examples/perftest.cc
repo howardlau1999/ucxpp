@@ -1,3 +1,6 @@
+#include "acceptor.h"
+#include "connector.h"
+#include "worker_epoll.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -242,12 +245,7 @@ int main(int argc, char *argv[]) {
     return builder.build();
   }();
   auto loop = ucxpp::socket::event_loop::new_loop();
-  auto worker = [&]() {
-    if (perf.epoll) {
-      return std::make_shared<ucxpp::worker>(ctx, loop);
-    }
-    return std::make_shared<ucxpp::worker>(ctx);
-  }();
+  auto worker = [&]() { return std::make_shared<ucxpp::worker>(ctx); }();
   if (perf.core.has_value()) {
     bind_cpu(perf.core.value());
   } else {
@@ -277,6 +275,7 @@ int main(int argc, char *argv[]) {
       worker->progress();
     }
   } else {
+    ucxpp::register_loop(worker, loop);
     bool dummy = false;
     while (worker.use_count() > 1) {
       loop->poll(dummy);

@@ -19,14 +19,8 @@ option(UCXPP_BUILD_EXAMPLES "Build examples" ON)
 
 include_directories(include)
 
-set(UCXPP_SOURCE_FILES
-  src/socket/channel.cc
-  src/socket/event_loop.cc
-  src/socket/tcp_connection.cc
-  src/socket/tcp_listener.cc
+set(UCXPP_SOURCE_FILES 
   src/awaitable.cc
-  src/acceptor.cc
-  src/connector.cc
   src/context.cc
   src/worker.cc
   src/endpoint.cc
@@ -83,9 +77,25 @@ target_link_libraries(ucxpp ${UCXPP_LINK_LIBRARIES})
 
 set(UCXPP_EXAMPLES helloworld perftest)
 if (UCXPP_BUILD_EXAMPLES)
+  include_directories(examples/include)
+  set(UCXPP_EXAMPLES_LIB_SOURCE_FILES 
+    examples/socket/channel.cc
+    examples/socket/event_loop.cc
+    examples/socket/tcp_connection.cc
+    examples/socket/tcp_listener.cc
+    examples/acceptor.cc
+    examples/connector.cc
+    examples/worker_epoll.cc
+    examples/ep_transmission.cc
+  )
+  add_library(ucxpp_examples STATIC ${UCXPP_EXAMPLES_LIB_SOURCE_FILES})
+  target_compile_options(ucxpp_examples ${UCXPP_COMPILE_OPTIONS})
+  target_link_options(ucxpp_examples ${UCXPP_LINK_OPTIONS})
   foreach (EXAMPLE ${UCXPP_EXAMPLES})
     add_executable(${EXAMPLE} examples/${EXAMPLE}.cc)
-    target_link_libraries(${EXAMPLE} ucxpp) 
+    target_link_libraries(${EXAMPLE} ucxpp ucxpp_examples) 
+    target_compile_options(${EXAMPLE} ${UCXPP_COMPILE_OPTIONS})
+    target_link_options(${EXAMPLE} ${UCXPP_LINK_OPTIONS})
   endforeach ()
 endif ()
 

@@ -1,5 +1,6 @@
-#include "ucxpp/socket/channel.h"
+#include "socket/channel.h"
 
+#include "socket/event_loop.h"
 #include <cassert>
 #include <cerrno>
 #include <cstring>
@@ -9,7 +10,6 @@
 #include <unistd.h>
 
 #include "ucxpp/error.h"
-#include "ucxpp/socket/event_loop.h"
 
 #include "ucxpp/detail/debug.h"
 

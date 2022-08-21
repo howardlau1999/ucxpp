@@ -1,10 +1,10 @@
 #pragma once
 
+#include "socket/channel.h"
 #include <cstdint>
 #include <memory>
 #include <netdb.h>
 
-#include "ucxpp/socket/channel.h"
 #include "ucxpp/task.h"
 
 namespace ucxpp {

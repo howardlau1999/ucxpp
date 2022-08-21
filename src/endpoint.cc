@@ -34,37 +34,6 @@ endpoint::endpoint(std::shared_ptr<worker> worker, remote_address const &peer)
                    "failed to create ep");
 }
 
-task<std::shared_ptr<endpoint>>
-endpoint::from_tcp_connection(socket::tcp_connection &conncetion,
-                              std::shared_ptr<worker> worker) {
-  size_t address_length_read = 0;
-  char address_length_buffer[sizeof(size_t)];
-  while (address_length_read < sizeof(size_t)) {
-    int n =
-        co_await conncetion.recv(address_length_buffer + address_length_read,
-                                 sizeof(size_t) - address_length_read);
-    if (n == 0) {
-      throw std::runtime_error("failed to read address length");
-    }
-    address_length_read += n;
-  }
-  size_t address_length;
-  char *p = address_length_buffer;
-  detail::deserialize(p, address_length);
-  std::vector<char> address_buffer(address_length);
-  size_t address_read = 0;
-  while (address_read < address_length) {
-    int n = co_await conncetion.recv(&address_buffer[address_read],
-                                     address_length - address_read);
-    if (n == 0) {
-      throw std::runtime_error("failed to read address");
-    }
-    address_read += n;
-  }
-  auto remote_addr = remote_address(std::move(address_buffer));
-  co_return std::make_shared<endpoint>(worker, remote_addr);
-}
-
 std::shared_ptr<worker> endpoint::worker_ptr() const { return worker_; }
 
 void endpoint::print() const { ::ucp_ep_print_info(ep_, stdout); }

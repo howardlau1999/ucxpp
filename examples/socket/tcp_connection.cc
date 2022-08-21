@@ -1,5 +1,6 @@
-#include "ucxpp/socket/tcp_connection.h"
+#include "socket/tcp_connection.h"
 
+#include "socket/channel.h"
 #include <arpa/inet.h>
 #include <memory>
 #include <netdb.h>
@@ -7,7 +8,6 @@
 #include <unistd.h>
 
 #include "ucxpp/error.h"
-#include "ucxpp/socket/channel.h"
 
 #include "ucxpp/detail/debug.h"
 

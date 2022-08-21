@@ -14,7 +14,6 @@
 #include "ucxpp/address.h"
 #include "ucxpp/awaitable.h"
 #include "ucxpp/error.h"
-#include "ucxpp/socket/channel.h"
 
 #include "ucxpp/detail/debug.h"
 
@@ -33,40 +32,9 @@ worker::worker(std::shared_ptr<context> ctx) : ctx_(ctx), event_fd_(-1) {
   }
 }
 
-worker::worker(std::shared_ptr<context> ctx,
-               std::shared_ptr<socket::event_loop> loop)
-    : worker(ctx) {
-  if (event_fd_ == -1) {
-    throw std::runtime_error("wakeup feature is not enabled");
-  }
-  event_channel_ = std::make_shared<socket::channel>(event_fd_);
-  register_loop(loop);
-}
-
 int worker::event_fd() const {
   assert(event_fd_ != -1);
   return event_fd_;
-}
-
-void worker::register_loop(std::shared_ptr<socket::event_loop> loop) {
-  event_channel_->set_event_loop(loop);
-  event_channel_->set_readable_callback(
-      [&worker = *this, event_channel = std::weak_ptr<ucxpp::socket::channel>(
-                            event_channel_)]() {
-        while (worker.progress()) {
-          continue;
-        }
-        worker.arm();
-        auto event_channel_ptr = event_channel.lock();
-        if (event_channel_ptr) {
-          event_channel_ptr->wait_readable();
-        }
-      });
-  event_channel_->wait_readable();
-}
-
-std::shared_ptr<socket::channel> worker::event_channel() const {
-  return event_channel_;
 }
 
 std::shared_ptr<context> worker::context_ptr() { return ctx_; }
@@ -95,11 +63,6 @@ worker_flush_awaitable worker::flush() {
   return worker_flush_awaitable(this->shared_from_this());
 }
 
-worker::~worker() {
-  if (event_channel_) {
-    event_channel_->set_event_loop(nullptr);
-  };
-  ::ucp_worker_destroy(worker_);
-}
+worker::~worker() { ::ucp_worker_destroy(worker_); }
 
 } // namespace ucxpp

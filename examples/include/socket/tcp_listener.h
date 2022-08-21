@@ -1,8 +1,7 @@
 #pragma once
 
+#include "socket/event_loop.h"
 #include <memory>
-
-#include "ucxpp/socket/event_loop.h"
 
 #include "ucxpp/detail/noncopyable.h"
 

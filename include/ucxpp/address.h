@@ -6,7 +6,6 @@
 #include <ucp/api/ucp.h>
 #include <ucp/api/ucp_def.h>
 
-#include "ucxpp/socket/tcp_connection.h"
 #include "ucxpp/task.h"
 
 #include "ucxpp/detail/noncopyable.h"
@@ -70,14 +69,6 @@ public:
    * @return size_t The address length
    */
   size_t get_length() const;
-
-  /**
-   * @brief Send the address to a remote peer
-   *
-   * @param connection The TCP connection to send the address over
-   * @return task<void> A coroutine
-   */
-  task<void> send_to(socket::tcp_connection &connection);
 
   /**
    * @brief Destroy the local address object and release the buffer

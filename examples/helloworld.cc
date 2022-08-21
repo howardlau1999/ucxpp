@@ -1,15 +1,16 @@
+#include "acceptor.h"
+#include "connector.h"
+#include "socket/channel.h"
+#include "worker_epoll.h"
 #include <algorithm>
 #include <endian.h>
 #include <iomanip>
 #include <iostream>
 #include <memory>
 
-#include <ucp/api/ucp_def.h>
-
 #include "ucxpp/context.h"
 #include "ucxpp/endpoint.h"
 #include "ucxpp/memory.h"
-#include "ucxpp/socket/channel.h"
 #include <ucxpp/ucxpp.h>
 
 constexpr ucp_tag_t kTestTag = 0xFD709394UL;
@@ -214,7 +215,9 @@ int main(int argc, char *argv[]) {
                  .enable_wakeup()
                  .build();
   auto loop = ucxpp::socket::event_loop::new_loop();
-  auto worker = std::make_shared<ucxpp::worker>(ctx, loop);
+  auto worker = std::make_shared<ucxpp::worker>(ctx);
+  ucxpp::register_loop(worker, loop);
+  bool close_triggered;
   if (argc == 2) {
     auto listener = std::make_shared<ucxpp::socket::tcp_listener>(
         loop, "0.0.0.0", std::stoi(argv[1]));
@@ -227,7 +230,6 @@ int main(int argc, char *argv[]) {
   } else {
     std::cout << "Usage: " << argv[0] << " <host> <port>" << std::endl;
   }
-  bool close_triggered;
   while (worker.use_count() > 1) {
     loop->poll(close_triggered);
   }

@@ -1,4 +1,6 @@
-#include "ucxpp/connector.h"
+#include "connector.h"
+
+#include "ep_transmission.h"
 
 #include "ucxpp/address.h"
 
@@ -13,8 +15,8 @@ connector::connector(std::shared_ptr<worker> worker,
 task<std::shared_ptr<endpoint>> connector::connect() {
   auto connection =
       co_await socket::tcp_connection::connect(loop_, hostname_, port_);
-  co_await address_.send_to(*connection);
-  auto endpoint = co_await endpoint::from_tcp_connection(*connection, worker_);
+  co_await send_address(address_, *connection);
+  auto endpoint = co_await from_tcp_connection(*connection, worker_);
   co_return endpoint;
 }
 

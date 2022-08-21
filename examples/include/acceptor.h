@@ -1,11 +1,11 @@
 #pragma once
 
+#include "socket/tcp_connection.h"
+#include "socket/tcp_listener.h"
 #include <memory>
 
 #include "ucxpp/address.h"
 #include "ucxpp/endpoint.h"
-#include "ucxpp/socket/tcp_connection.h"
-#include "ucxpp/socket/tcp_listener.h"
 #include "ucxpp/task.h"
 
 namespace ucxpp {

@@ -13,7 +13,6 @@
 #include "ucxpp/awaitable.h"
 #include "ucxpp/error.h"
 #include "ucxpp/memory.h"
-#include "ucxpp/socket/tcp_connection.h"
 #include "ucxpp/task.h"
 #include "ucxpp/worker.h"
 
@@ -72,18 +71,6 @@ public:
    * @return ucp_ep_h The endpoint's native UCX handle
    */
   ucp_ep_h handle() const;
-
-  /**
-   * @brief Accept a UCX endpoint from a remote peer
-   *
-   * @param conncetion The TCP connection
-   * @param worker The UCX worker
-   * @return task<std::shared_ptr<endpoint>> A coroutine that returns the
-   * accepted endpoint
-   */
-  static task<std::shared_ptr<endpoint>>
-  from_tcp_connection(socket::tcp_connection &conncetion,
-                      std::shared_ptr<worker> worker);
 
   /**
    * @brief Stream send the buffer

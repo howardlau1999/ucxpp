@@ -1,5 +1,6 @@
-#include "ucxpp/socket/tcp_listener.h"
+#include "socket/tcp_listener.h"
 
+#include "socket/channel.h"
 #include <arpa/inet.h>
 #include <cassert>
 #include <cerrno>
@@ -9,7 +10,6 @@
 #include <sys/socket.h>
 
 #include "ucxpp/error.h"
-#include "ucxpp/socket/channel.h"
 
 #include "ucxpp/detail/debug.h"
 

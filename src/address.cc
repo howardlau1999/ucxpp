@@ -40,19 +40,6 @@ std::vector<char> local_address::serialize() const {
   return buffer;
 }
 
-task<void> local_address::send_to(socket::tcp_connection &connection) {
-  auto buffer = serialize();
-  size_t sent = 0;
-  while (sent < buffer.size()) {
-    int n = co_await connection.send(&buffer[sent], buffer.size() - sent);
-    if (n < 0) {
-      throw std::runtime_error("send failed");
-    }
-    sent += n;
-  }
-  co_return;
-}
-
 const ucp_address_t *local_address::get_address() const { return address_; }
 
 size_t local_address::get_length() const { return address_length_; }
