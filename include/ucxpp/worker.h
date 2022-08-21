@@ -24,6 +24,7 @@ class worker : public std::enable_shared_from_this<worker> {
   friend class endpoint;
   ucp_worker_h worker_;
   std::shared_ptr<context> ctx_;
+  int event_fd_;
   std::shared_ptr<socket::channel> event_channel_;
 
   void register_loop(std::shared_ptr<socket::event_loop> loop);
@@ -36,6 +37,14 @@ public:
    * @param ctx UCX context
    */
   worker(std::shared_ptr<context> ctx);
+
+  /**
+   * @brief Get the event fd for the worker. The wakeup feature must be enabled
+   * for this to work.
+   *
+   * @return int
+   */
+  int event_fd() const;
 
   /**
    * @brief Construct a new worker object and add it to a event loop. The wakeup

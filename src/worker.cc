@@ -20,26 +20,32 @@
 
 namespace ucxpp {
 
-worker::worker(std::shared_ptr<context> ctx) : ctx_(ctx) {
+worker::worker(std::shared_ptr<context> ctx) : ctx_(ctx), event_fd_(-1) {
   ucp_worker_params_t worker_params;
   worker_params.field_mask = UCP_WORKER_PARAM_FIELD_THREAD_MODE;
   worker_params.thread_mode = UCS_THREAD_MODE_SINGLE;
   check_ucs_status(::ucp_worker_create(ctx->context_, &worker_params, &worker_),
                    "failed to create ucp worker");
+  if (ctx_->features() & UCP_FEATURE_WAKEUP) {
+    check_ucs_status(::ucp_worker_get_efd(worker_, &event_fd_),
+                     "failed to get ucp worker event fd");
+    check_ucs_status(::ucp_worker_arm(worker_), "failed to arm ucp worker");
+  }
 }
 
 worker::worker(std::shared_ptr<context> ctx,
                std::shared_ptr<socket::event_loop> loop)
     : worker(ctx) {
-  if (!(ctx_->features() & UCP_FEATURE_WAKEUP)) {
-    throw std::runtime_error("context does not support wakeup");
+  if (event_fd_ == -1) {
+    throw std::runtime_error("wakeup feature is not enabled");
   }
-  int efd;
-  check_ucs_status(::ucp_worker_get_efd(worker_, &efd),
-                   "failed to get ucp worker event fd");
-  event_channel_ = std::make_shared<socket::channel>(efd);
-  check_ucs_status(::ucp_worker_arm(worker_), "failed to arm ucp worker");
+  event_channel_ = std::make_shared<socket::channel>(event_fd_);
   register_loop(loop);
+}
+
+int worker::event_fd() const {
+  assert(event_fd_ != -1);
+  return event_fd_;
 }
 
 void worker::register_loop(std::shared_ptr<socket::event_loop> loop) {
@@ -50,6 +56,8 @@ void worker::register_loop(std::shared_ptr<socket::event_loop> loop) {
         while (worker.progress()) {
           continue;
         }
+        check_ucs_status(::ucp_worker_arm(worker.worker_),
+                         "failed to arm ucp worker");
         auto event_channel_ptr = event_channel.lock();
         if (event_channel_ptr) {
           event_channel_ptr->wait_readable();
