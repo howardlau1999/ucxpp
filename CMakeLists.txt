@@ -38,14 +38,14 @@ list(APPEND
   UCXPP_COMPILE_OPTIONS
   PUBLIC
   -flto
-  PUBLIC
+  PRIVATE
   -fno-rtti
 )
 list(APPEND
   UCXPP_LINK_OPTIONS
   PUBLIC
   -flto
-  PUBLIC
+  PRIVATE
   -fno-rtti
 )
 
