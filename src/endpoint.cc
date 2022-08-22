@@ -70,6 +70,7 @@ ep_close_awaitable endpoint::close() {
 void endpoint::close_cb(void *request, ucs_status_t status, void *user_data) {
   UCXPP_LOG_DEBUG("endpoint closed request=%p status=%s user_data=%p", request,
                   ::ucs_status_string(status), user_data);
+  ::ucp_request_free(request);
 }
 
 endpoint::~endpoint() {
