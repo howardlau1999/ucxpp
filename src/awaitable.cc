@@ -22,15 +22,10 @@ ep_close_awaitable::ep_close_awaitable(std::shared_ptr<endpoint> endpoint)
 bool ep_close_awaitable::await_ready() noexcept {
   auto send_param = build_param();
   auto request = ::ucp_ep_close_nbx(endpoint_->handle(), &send_param);
-  if (UCS_PTR_IS_PTR(request)) {
-    endpoint_->close_request_ = request;
-    return false;
-  }
   if (check_request_ready(request)) {
-    endpoint_->ep_ = nullptr;
-    endpoint_->close_request_ = nullptr;
     return true;
   }
+  endpoint_->close_request_ = request;
   return false;
 }
 
