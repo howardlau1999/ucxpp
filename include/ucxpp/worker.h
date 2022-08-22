@@ -81,7 +81,7 @@ public:
    * @brief Arm the worker for next event notification.
    *
    */
-  void arm() const;
+  bool arm() const;
 
   /**
    * @brief Flush the worker

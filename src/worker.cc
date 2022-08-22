@@ -28,7 +28,6 @@ worker::worker(std::shared_ptr<context> ctx) : ctx_(ctx), event_fd_(-1) {
   if (ctx_->features() & UCP_FEATURE_WAKEUP) {
     check_ucs_status(::ucp_worker_get_efd(worker_, &event_fd_),
                      "failed to get ucp worker event fd");
-    arm();
   }
 }
 
@@ -55,8 +54,13 @@ void worker::wait() const {
   check_ucs_status(::ucp_worker_wait(worker_), "failed to wait worker");
 }
 
-void worker::arm() const {
-  check_ucs_status(::ucp_worker_arm(worker_), "failed to arm worker");
+bool worker::arm() const {
+  auto status = ::ucp_worker_arm(worker_);
+  if (status == UCS_ERR_BUSY) {
+    return false;
+  }
+  check_ucs_status(status, "failed to arm worker");
+  return true;
 }
 
 worker_flush_awaitable worker::flush() {

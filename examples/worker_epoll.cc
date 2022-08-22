@@ -10,14 +10,15 @@ void register_loop(std::shared_ptr<worker> worker,
       std::make_shared<socket::channel>(worker->event_fd(), loop);
   event_channel->set_event_loop(loop);
   event_channel->set_readable_callback([worker, event_channel]() {
-    while (worker->progress()) {
-      continue;
-    }
-    if (worker.use_count() <= 2) {
+    do {
+      while (worker->progress()) {
+      }
+    } while (!worker->arm());
+    if (worker.use_count() > 2) {
+      event_channel->wait_readable();
+    } else {
       event_channel->set_event_loop(nullptr);
       event_channel->set_readable_callback([]() {});
-    } else {
-      event_channel->wait_readable();
     }
   });
   event_channel->wait_readable();
