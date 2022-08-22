@@ -63,8 +63,10 @@ ep_flush_awaitable endpoint::flush() const {
   return ep_flush_awaitable(this->shared_from_this());
 }
 
-ep_close_awaitable endpoint::close() {
-  return ep_close_awaitable(this->shared_from_this());
+task<void> endpoint::close() {
+  co_await ep_close_awaitable(this->shared_from_this());
+  ep_ = nullptr;
+  co_return;
 }
 
 void endpoint::close_cb(void *request, ucs_status_t status, void *user_data) {

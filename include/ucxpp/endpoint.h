@@ -126,9 +126,9 @@ public:
    * @brief Close the endpoint. You should not use the endpoint after calling
    * this function.
    *
-   * @return ep_close_awaitable A coroutine that returns upon completion
+   * @return task<void> A coroutine that returns upon completion
    */
-  ep_close_awaitable close();
+  task<void> close();
 
   /**
    * @brief Endpoint close callback
