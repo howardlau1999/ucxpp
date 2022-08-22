@@ -8,6 +8,8 @@
 
 #define __FILENAME__ (&__FILE__[SOURCE_PATH_LENGTH])
 
+namespace ucxpp {
+
 enum class LogLevel {
   TRACE,
   DEBUG,
@@ -15,12 +17,14 @@ enum class LogLevel {
   WARN,
   ERROR,
 };
+}
 
-constexpr static inline LogLevel log_level = LogLevel::DEBUG;
+constexpr static inline ucxpp::LogLevel ucxpp_log_level =
+    ucxpp::LogLevel::DEBUG;
 
 #define UCXPP_LOG_TRACE(msg, ...)                                              \
   do {                                                                         \
-    if (log_level > LogLevel::TRACE)                                           \
+    if (ucxpp_log_level > ucxpp::LogLevel::TRACE)                              \
       break;                                                                   \
     printf("[TRACE] [%s:%d] " msg "\n", __FILENAME__,                          \
            __LINE__ __VA_OPT__(, ) __VA_ARGS__);                               \
@@ -28,7 +32,7 @@ constexpr static inline LogLevel log_level = LogLevel::DEBUG;
 
 #define UCXPP_LOG_DEBUG(msg, ...)                                              \
   do {                                                                         \
-    if (log_level > LogLevel::DEBUG)                                           \
+    if (ucxpp_log_level > ucxpp::LogLevel::DEBUG)                              \
       break;                                                                   \
     printf("[DEBUG] [%s:%d] " msg "\n", __FILENAME__,                          \
            __LINE__ __VA_OPT__(, ) __VA_ARGS__);                               \
@@ -36,7 +40,7 @@ constexpr static inline LogLevel log_level = LogLevel::DEBUG;
 
 #define UCXPP_LOG_INFO(msg, ...)                                               \
   do {                                                                         \
-    if (log_level > LogLevel::INFO)                                            \
+    if (ucxpp_log_level > ucxpp::LogLevel::INFO)                               \
       break;                                                                   \
     printf("[INFO ] [%s:%d] " msg "\n", __FILENAME__,                          \
            __LINE__ __VA_OPT__(, ) __VA_ARGS__);                               \
