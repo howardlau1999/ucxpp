@@ -33,6 +33,7 @@ class endpoint : public noncopyable,
   std::shared_ptr<worker> worker_;
   ucp_ep_h ep_;
   void *close_request_;
+  remote_address peer_;
 
 public:
   /**
@@ -71,6 +72,13 @@ public:
    * @return ucp_ep_h The endpoint's native UCX handle
    */
   ucp_ep_h handle() const;
+
+  /**
+   * @brief Get the endpoint's remote address
+   *
+   * @return remote_address The endpoint's remote address
+   */
+  const remote_address &get_address() const;
 
   /**
    * @brief Stream send the buffer

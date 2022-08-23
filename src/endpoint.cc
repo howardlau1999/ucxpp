@@ -23,7 +23,7 @@ void endpoint::error_cb(void *ep, ucp_ep_h ep_h, ucs_status_t status) {
 }
 
 endpoint::endpoint(std::shared_ptr<worker> worker, remote_address const &peer)
-    : worker_(worker) {
+    : worker_(worker), peer_(peer) {
   ucp_ep_params_t ep_params;
   ep_params.field_mask =
       UCP_EP_PARAM_FIELD_REMOTE_ADDRESS | UCP_EP_PARAM_FIELD_ERR_HANDLER;
@@ -39,6 +39,8 @@ std::shared_ptr<worker> endpoint::worker_ptr() const { return worker_; }
 void endpoint::print() const { ::ucp_ep_print_info(ep_, stdout); }
 
 ucp_ep_h endpoint::handle() const { return ep_; }
+
+const remote_address &endpoint::get_address() const { return peer_; }
 
 stream_send_awaitable endpoint::stream_send(void const *buffer,
                                             size_t length) const {
