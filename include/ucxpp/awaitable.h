@@ -277,6 +277,13 @@ public:
       : worker_(worker), request_(nullptr), buffer_(buffer), length_(length),
         tag_(tag), tag_mask_(tag_mask) {}
 
+  tag_recv_awaitable(ucp_worker_h worker, void *buffer, size_t length,
+                     ucp_tag_t tag, ucp_tag_t tag_mask,
+                     tag_recv_awaitable *&cancel)
+      : tag_recv_awaitable(worker, buffer, length, tag, tag_mask) {
+    cancel = this;
+  }
+
   static void tag_recv_cb(void *request, ucs_status_t status,
                           ucp_tag_recv_info_t const *tag_info,
                           void *user_data) {
