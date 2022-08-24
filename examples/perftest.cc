@@ -153,7 +153,7 @@ ucxpp::task<void> receiver(std::shared_ptr<ucxpp::endpoint> ep,
       ep->worker_ptr()->context_ptr(), perf.message_size);
   auto total_iterations = warmup ? perf.warmup_iterations : perf.iterations;
   while (iterations < total_iterations) {
-    co_await ep->tag_recv(buffer, perf.message_size, k_test_tag);
+    co_await ep->worker_ptr()->tag_recv(buffer, perf.message_size, k_test_tag);
     iterations++;
     print_report();
   }

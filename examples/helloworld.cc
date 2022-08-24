@@ -44,7 +44,7 @@ ucxpp::task<void> client(ucxpp::connector connector) {
 
   /* Tag Send/Recv */
   auto [n, sender_tag] =
-      co_await ep->tag_recv(buffer, sizeof(buffer), kTestTag);
+      co_await ep->worker_ptr()->tag_recv(buffer, sizeof(buffer), kTestTag);
   std::cout << "Received " << n << " bytes from " << std::hex << sender_tag
             << std::dec << ": " << buffer << std::endl;
   std::copy_n("world", 6, buffer);
@@ -79,7 +79,7 @@ ucxpp::task<void> client(ucxpp::connector connector) {
   co_await atomic_mr.atomic_fetch_add(atomic_raddr, local_value, reply_value);
   std::cout << "Fetched and added on server: " << reply_value << std::endl;
   co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
-  co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
+  co_await ep->worker_ptr()->tag_recv(&bell, sizeof(bell), kBellTag);
 
   /* Compare and Swap */
   local_value = reply_value + local_value;
@@ -88,35 +88,35 @@ ucxpp::task<void> client(ucxpp::connector connector) {
                                          reply_value);
   std::cout << "Compared and swapped on server: " << reply_value << std::endl;
   co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
-  co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
+  co_await ep->worker_ptr()->tag_recv(&bell, sizeof(bell), kBellTag);
 
   /* Swap */
   local_value = 123;
   co_await atomic_mr.atomic_swap(atomic_raddr, local_value, reply_value);
   std::cout << "Swapped on server: " << reply_value << std::endl;
   co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
-  co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
+  co_await ep->worker_ptr()->tag_recv(&bell, sizeof(bell), kBellTag);
 
   /* Fetch and And */
   local_value = 0xF;
   co_await atomic_mr.atomic_fetch_and(atomic_raddr, local_value, reply_value);
   std::cout << "Fetched and anded on server: " << reply_value << std::endl;
   co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
-  co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
+  co_await ep->worker_ptr()->tag_recv(&bell, sizeof(bell), kBellTag);
 
   /* Fetch and Or */
   local_value = 0xF;
   co_await atomic_mr.atomic_fetch_or(atomic_raddr, local_value, reply_value);
   std::cout << "Fetched and ored on server: " << reply_value << std::endl;
   co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
-  co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
+  co_await ep->worker_ptr()->tag_recv(&bell, sizeof(bell), kBellTag);
 
   /* Fetch and Xor */
   local_value = 0xF;
   co_await atomic_mr.atomic_fetch_xor(atomic_raddr, local_value, reply_value);
   std::cout << "Fetched and xored on server: " << reply_value << std::endl;
   co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
-  co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
+  co_await ep->worker_ptr()->tag_recv(&bell, sizeof(bell), kBellTag);
 
   co_await ep->flush();
   co_await ep->close();
@@ -142,7 +142,7 @@ ucxpp::task<void> handle_endpoint(std::shared_ptr<ucxpp::endpoint> ep) {
   /* Tag Send/Recv */
   co_await ep->tag_send(buffer, sizeof(buffer), kTestTag);
   auto [n, sender_tag] =
-      co_await ep->tag_recv(buffer, sizeof(buffer), kTestTag);
+      co_await ep->worker_ptr()->tag_recv(buffer, sizeof(buffer), kTestTag);
   std::cout << "Received " << n << " bytes from " << std::hex << sender_tag
             << std::dec << ": " << buffer << std::endl;
 
@@ -159,7 +159,7 @@ ucxpp::task<void> handle_endpoint(std::shared_ptr<ucxpp::endpoint> ep) {
   co_await send_mr(ep, buffer, local_mr);
 
   size_t bell;
-  co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
+  co_await ep->worker_ptr()->tag_recv(&bell, sizeof(bell), kBellTag);
   std::cout << "Written by client: " << buffer << std::endl;
 
   /* Atomic */
@@ -168,27 +168,27 @@ ucxpp::task<void> handle_endpoint(std::shared_ptr<ucxpp::endpoint> ep) {
       ep->worker_ptr()->context_ptr(), &value, sizeof(value));
   co_await send_mr(ep, &value, atomic_mr);
 
-  co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
+  co_await ep->worker_ptr()->tag_recv(&bell, sizeof(bell), kBellTag);
   std::cout << "Fetched and added by client: " << value << std::endl;
   co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
 
-  co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
+  co_await ep->worker_ptr()->tag_recv(&bell, sizeof(bell), kBellTag);
   std::cout << "Compared and Swapped by client: " << value << std::endl;
   co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
 
-  co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
+  co_await ep->worker_ptr()->tag_recv(&bell, sizeof(bell), kBellTag);
   std::cout << "Swapped by client: " << value << std::endl;
   co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
 
-  co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
+  co_await ep->worker_ptr()->tag_recv(&bell, sizeof(bell), kBellTag);
   std::cout << "Fetched and Anded by client: " << value << std::endl;
   co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
 
-  co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
+  co_await ep->worker_ptr()->tag_recv(&bell, sizeof(bell), kBellTag);
   std::cout << "Fetched and Ored by client: " << value << std::endl;
   co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
 
-  co_await ep->tag_recv(&bell, sizeof(bell), kBellTag);
+  co_await ep->worker_ptr()->tag_recv(&bell, sizeof(bell), kBellTag);
   std::cout << "Fetched and Xored by client: " << value << std::endl;
   co_await ep->tag_send(&bell, sizeof(bell), kBellTag);
 
