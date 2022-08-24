@@ -63,6 +63,11 @@ bool worker::arm() const {
   return true;
 }
 
+tag_recv_awaitable worker::tag_recv(void *buffer, size_t length, ucp_tag_t tag,
+                                    ucp_tag_t tag_mask) const {
+  return tag_recv_awaitable(worker_, buffer, length, tag, tag_mask);
+}
+
 worker_flush_awaitable worker::flush() {
   return worker_flush_awaitable(this->shared_from_this());
 }

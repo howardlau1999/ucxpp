@@ -111,19 +111,6 @@ public:
                               ucp_tag_t tag) const;
 
   /**
-   * @brief Tag receive to the buffer
-   *
-   * @param buffer The buffer to receive to
-   * @param length The length of the buffer
-   * @param tag The tag to receive with
-   * @param tag_mask The bit mask for tag matching, 0 means accepting any tag
-   * @return tag_recv_awaitable A coroutine that returns a pair of number of
-   * bytes received and the sender tag upon completion
-   */
-  tag_recv_awaitable tag_recv(void *buffer, size_t length, ucp_tag_t tag,
-                              ucp_tag_t tag_mask = 0xFFFFFFFFFFFFFFFF) const;
-
-  /**
    * @brief Flush the endpoint
    *
    * @return ep_flush_awaitable A coroutine that returns upon completion

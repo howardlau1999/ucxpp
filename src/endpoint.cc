@@ -56,11 +56,6 @@ tag_send_awaitable endpoint::tag_send(void const *buffer, size_t length,
   return tag_send_awaitable(ep_, buffer, length, tag);
 }
 
-tag_recv_awaitable endpoint::tag_recv(void *buffer, size_t length,
-                                      ucp_tag_t tag, ucp_tag_t tag_mask) const {
-  return tag_recv_awaitable(worker_->worker_, buffer, length, tag, tag_mask);
-}
-
 ep_flush_awaitable endpoint::flush() const {
   return ep_flush_awaitable(this->shared_from_this());
 }
