@@ -220,13 +220,22 @@ public:
 class stream_recv_awaitable : base_awaitable {
 private:
   ucp_ep_h ep_;
+  ucp_worker_h worker_;
   size_t received_;
   void *buffer_;
   size_t length_;
+  void *request_;
 
 public:
   stream_recv_awaitable(ucp_ep_h ep, void *buffer, size_t length)
       : ep_(ep), received_(0), buffer_(buffer), length_(length) {}
+
+  stream_recv_awaitable(ucp_ep_h ep, ucp_worker_h worker, void *buffer,
+                        size_t length, stream_recv_awaitable *&cancel)
+      : ep_(ep), worker_(worker), received_(0), buffer_(buffer),
+        length_(length) {
+    cancel = this;
+  }
 
   static void stream_recv_cb(void *request, ucs_status_t status,
                              size_t received, void *user_data) {
@@ -245,7 +254,13 @@ public:
     stream_recv_param.user_data = this;
     auto request = ::ucp_stream_recv_nbx(ep_, buffer_, length_, &received_,
                                          &stream_recv_param);
-    return check_request_ready(request);
+
+    if (!check_request_ready(request)) {
+      request_ = request;
+      return false;
+    }
+
+    return true;
   }
 
   bool await_suspend(std::coroutine_handle<> h) {
@@ -256,6 +271,12 @@ public:
   size_t await_resume() const {
     check_ucs_status(status_, "operation failed");
     return received_;
+  }
+
+  void cancel() {
+    if (request_ != nullptr) {
+      ::ucp_request_cancel(worker_, request_);
+    }
   }
 };
 
