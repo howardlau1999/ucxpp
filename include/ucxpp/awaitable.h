@@ -264,6 +264,7 @@ class tag_recv_awaitable : public base_awaitable {
 
 private:
   ucp_worker_h worker_;
+  void *request_;
   void *buffer_;
   size_t length_;
   ucp_tag_t tag_;
@@ -273,8 +274,8 @@ private:
 public:
   tag_recv_awaitable(ucp_worker_h worker, void *buffer, size_t length,
                      ucp_tag_t tag, ucp_tag_t tag_mask)
-      : worker_(worker), buffer_(buffer), length_(length), tag_(tag),
-        tag_mask_(tag_mask) {}
+      : worker_(worker), request_(nullptr), buffer_(buffer), length_(length),
+        tag_(tag), tag_mask_(tag_mask) {}
 
   static void tag_recv_cb(void *request, ucs_status_t status,
                           ucp_tag_recv_info_t const *tag_info,
@@ -299,7 +300,11 @@ public:
     auto request = ::ucp_tag_recv_nbx(worker_, buffer_, length_, tag_,
                                       tag_mask_, &tag_recv_param);
 
-    return check_request_ready(request);
+    if (!check_request_ready(request)) {
+      request_ = request;
+      return false;
+    }
+    return true;
   }
 
   bool await_suspend(std::coroutine_handle<> h) {
@@ -307,9 +312,17 @@ public:
     return status_ == UCS_INPROGRESS;
   }
 
-  std::pair<size_t, ucp_tag_t> await_resume() const {
+  std::pair<size_t, ucp_tag_t> await_resume() {
+    request_ = nullptr;
     check_ucs_status(status_, "error in ucp_tag_recv_nbx");
     return std::make_pair(recv_info_.length, recv_info_.sender_tag);
+  }
+
+  void cancel() {
+    if (request_) {
+      ::ucp_request_cancel(worker_, request_);
+      request_ = nullptr;
+    }
   }
 };
 
