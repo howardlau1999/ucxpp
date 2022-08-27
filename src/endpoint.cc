@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <ucs/type/status.h>
 #include <utility>
 #include <vector>
 
@@ -18,8 +19,24 @@
 namespace ucxpp {
 
 void endpoint::error_cb(void *ep, ucp_ep_h ep_h, ucs_status_t status) {
-  UCXPP_LOG_ERROR("ep=%p ep_h=%p status=%s", ep, reinterpret_cast<void *>(ep_h),
-                  ::ucs_status_string(status));
+  UCXPP_LOG_ERROR("Endpoint error: ep=%p ep_h=%p status=%s", ep,
+                  reinterpret_cast<void *>(ep_h), ::ucs_status_string(status));
+  auto ep_ptr = reinterpret_cast<endpoint *>(ep);
+  if (!ep_ptr->close_request_) {
+    auto request = ::ucp_ep_close_nb(ep_h, UCP_EP_CLOSE_MODE_FLUSH);
+    if (UCS_PTR_IS_ERR(request)) {
+      UCXPP_LOG_ERROR(
+          "ep=%p ep_h=%p close failed: %s", ep, reinterpret_cast<void *>(ep_h),
+          ::ucs_status_string(UCS_PTR_STATUS(ep_ptr->close_request_)));
+      ep_ptr->close_request_ = nullptr;
+      ep_ptr->ep_ = nullptr;
+    } else if (UCS_PTR_IS_PTR(request)) {
+      ep_ptr->close_request_ = request;
+    } else {
+      ep_ptr->close_request_ = nullptr;
+      ep_ptr->ep_ = nullptr;
+    }
+  }
 }
 
 endpoint::endpoint(std::shared_ptr<worker> worker, remote_address const &peer)
