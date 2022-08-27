@@ -6,7 +6,6 @@
 #include <utility>
 
 #include <ucp/api/ucp.h>
-#include <ucp/api/ucp_def.h>
 
 #include "ucxpp/endpoint.h"
 #include "ucxpp/error.h"

@@ -12,7 +12,6 @@
 #include <ucs/type/status.h>
 
 #include <ucp/api/ucp.h>
-#include <ucp/api/ucp_def.h>
 
 #include "ucxpp/error.h"
 

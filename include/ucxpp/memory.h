@@ -3,8 +3,6 @@
 #include <cstdint>
 #include <memory>
 
-#include <ucp/api/ucp_def.h>
-
 #include "ucxpp/awaitable.h"
 #include "ucxpp/context.h"
 

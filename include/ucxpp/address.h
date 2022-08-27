@@ -4,7 +4,6 @@
 #include <vector>
 
 #include <ucp/api/ucp.h>
-#include <ucp/api/ucp_def.h>
 
 #include "ucxpp/task.h"
 
