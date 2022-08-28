@@ -79,6 +79,9 @@ public:
   /**
    * @brief Arm the worker for next event notification.
    *
+   * @return true If the worker was armed
+   * @return false If the worker has pending events. In this case, the user must
+   * call progress() until it returns false.
    */
   bool arm() const;
 
@@ -94,6 +97,13 @@ public:
    */
   tag_recv_awaitable tag_recv(void *buffer, size_t length, ucp_tag_t tag,
                               ucp_tag_t tag_mask = 0xFFFFFFFFFFFFFFFF) const;
+
+  /**
+   * @brief Fence the worker. Operations issued on the worker before the fence
+   * are ensured to complete before operations issued after the fence.
+   *
+   */
+  void fence();
 
   /**
    * @brief Flush the worker

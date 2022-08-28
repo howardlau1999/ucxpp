@@ -68,6 +68,10 @@ tag_recv_awaitable worker::tag_recv(void *buffer, size_t length, ucp_tag_t tag,
   return tag_recv_awaitable(worker_, buffer, length, tag, tag_mask);
 }
 
+void worker::fence() {
+  check_ucs_status(::ucp_worker_fence(worker_), "failed to fence worker");
+}
+
 worker_flush_awaitable worker::flush() {
   return worker_flush_awaitable(this->shared_from_this());
 }
