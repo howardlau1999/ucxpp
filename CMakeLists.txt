@@ -30,6 +30,7 @@ set(UCXPP_SOURCE_FILES
   src/endpoint.cc
   src/address.cc
   src/memory.cc
+  src/config.cc
 )
 
 add_library(ucxpp STATIC ${UCXPP_SOURCE_FILES})

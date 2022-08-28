@@ -7,6 +7,7 @@
 #include <ucp/api/ucp.h>
 
 #include "ucxpp/awaitable.h"
+#include "ucxpp/config.h"
 #include "ucxpp/error.h"
 
 namespace ucxpp {
@@ -64,9 +65,7 @@ context::builder &context::builder::enable_mt() {
 
 context::context(uint64_t features, bool print_config, bool enable_mt)
     : features_(features) {
-  ucp_config_t *config;
-  check_ucs_status(::ucp_config_read(NULL, NULL, &config),
-                   "failed to read ucp config");
+  config config;
   ucp_params_t ucp_params;
   ucp_params.field_mask = UCP_PARAM_FIELD_FEATURES;
   ucp_params.features = features;
@@ -74,12 +73,11 @@ context::context(uint64_t features, bool print_config, bool enable_mt)
     ucp_params.field_mask |= UCP_PARAM_FIELD_MT_WORKERS_SHARED;
     ucp_params.mt_workers_shared = 1;
   }
-  check_ucs_status(::ucp_init(&ucp_params, config, &context_),
+  check_ucs_status(::ucp_init(&ucp_params, config.handle(), &context_),
                    "failed to init ucp");
   if (print_config) {
-    ::ucp_config_print(config, stdout, nullptr, UCS_CONFIG_PRINT_CONFIG);
+    config.print();
   }
-  ::ucp_config_release(config);
 }
 
 uint64_t context::features() const { return features_; }
