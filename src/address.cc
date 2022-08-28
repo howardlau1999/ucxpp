@@ -16,7 +16,7 @@
 
 namespace ucxpp {
 
-local_address::local_address(std::shared_ptr<worker> worker,
+local_address::local_address(std::shared_ptr<worker const> worker,
                              ucp_address_t *address, size_t address_length)
     : worker_(worker), address_(address), address_length_(address_length) {}
 

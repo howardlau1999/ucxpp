@@ -17,7 +17,7 @@ class worker;
  *
  */
 class local_address : public noncopyable {
-  std::shared_ptr<worker> worker_;
+  std::shared_ptr<worker const> worker_;
   ucp_address_t *address_;
   size_t address_length_;
   friend class endpoint;
@@ -30,7 +30,7 @@ public:
    * @param address UCP address
    * @param address_length UCP address length
    */
-  local_address(std::shared_ptr<worker> worker, ucp_address_t *address,
+  local_address(std::shared_ptr<worker const> worker, ucp_address_t *address,
                 size_t address_length);
 
   /**

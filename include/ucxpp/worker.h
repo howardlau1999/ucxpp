@@ -45,21 +45,21 @@ public:
    *
    * @return std::shared_ptr<context> The worker's context object
    */
-  std::shared_ptr<context> context_ptr();
+  std::shared_ptr<context> context_ptr() const;
 
   /**
    * @brief Get the worker's UCX address
    *
    * @return local_address The worker's UCX address
    */
-  local_address get_address();
+  local_address get_address() const;
 
   /**
    * @brief Get the worker's native UCX handle
    *
    * @return ucp_worker_h The worker's native UCX handle
    */
-  ucp_worker_h handle();
+  ucp_worker_h handle() const;
 
   /**
    * @brief Progress the worker

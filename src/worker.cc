@@ -36,9 +36,9 @@ int worker::event_fd() const {
   return event_fd_;
 }
 
-std::shared_ptr<context> worker::context_ptr() { return ctx_; }
+std::shared_ptr<context> worker::context_ptr() const { return ctx_; }
 
-local_address worker::get_address() {
+local_address worker::get_address() const {
   ucp_address_t *address;
   size_t address_length;
   check_ucs_status(::ucp_worker_get_address(worker_, &address, &address_length),
@@ -46,7 +46,7 @@ local_address worker::get_address() {
   return ucxpp::local_address(shared_from_this(), address, address_length);
 }
 
-ucp_worker_h worker::handle() { return worker_; }
+ucp_worker_h worker::handle() const { return worker_; }
 
 bool worker::progress() const { return ::ucp_worker_progress(worker_); }
 
