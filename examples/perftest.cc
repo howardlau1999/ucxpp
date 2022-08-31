@@ -57,7 +57,7 @@ void reset_report() {
   g_last_tick = std::chrono::steady_clock::now();
 }
 
-void print_report(bool final = false) {
+void print_report(perf_context const &perf, bool final = false) {
   auto counter = g_counter;
   auto tick = std::chrono::steady_clock::now();
   auto elapsed = tick - g_last_tick;
@@ -67,6 +67,9 @@ void print_report(bool final = false) {
     ::fprintf(stdout, "Total elapsed: %.6fs\n", total_elapsed.count());
     ::fprintf(stdout, "Average IOPS: %zu\n",
               static_cast<size_t>(counter / total_elapsed.count()));
+    ::fprintf(stdout, "Average BW: %.3fMB/s\n",
+              counter * perf.message_size / total_elapsed.count() / 1024 /
+                  1024);
   } else if (elapsed.count() > 1000000000) [[unlikely]] {
     ::fprintf(stdout, "%zu,%zu\n", counter,
               (counter - g_last_counter) * 1000000000 / elapsed.count());
@@ -104,9 +107,16 @@ ucxpp::task<void> sender(std::shared_ptr<ucxpp::endpoint> ep,
       ep->worker_ptr()->context_ptr(), perf.message_size);
   auto total_iterations = warmup ? perf.warmup_iterations : perf.iterations;
   while (iterations < total_iterations) {
-    co_await ep->tag_send(buffer, perf.message_size, k_test_tag);
+    switch (perf.test.first) {
+    case test_category::stream: {
+      co_await ep->stream_send(buffer, perf.message_size);
+    } break;
+    default: {
+      co_await ep->tag_send(buffer, perf.message_size, k_test_tag);
+    } break;
+    }
     iterations++;
-    print_report();
+    print_report(perf);
   }
 }
 
@@ -138,7 +148,7 @@ ucxpp::task<void> client(ucxpp::connector connector, perf_context const &perf) {
       co_await task;
     }
   }
-  print_report(true);
+  print_report(perf, true);
 
   co_await ep->flush();
   co_await ep->close();
@@ -152,10 +162,23 @@ ucxpp::task<void> receiver(std::shared_ptr<ucxpp::endpoint> ep,
   auto [buffer, local_mr] = ucxpp::local_memory_handle::allocate_mem(
       ep->worker_ptr()->context_ptr(), perf.message_size);
   auto total_iterations = warmup ? perf.warmup_iterations : perf.iterations;
-  while (iterations < total_iterations) {
-    co_await ep->worker_ptr()->tag_recv(buffer, perf.message_size, k_test_tag);
-    iterations++;
-    print_report();
+  switch (perf.test.first) {
+  case test_category::stream: {
+    auto total_bytes = perf.message_size * total_iterations;
+    while (iterations < total_bytes) {
+      auto n = co_await ep->stream_recv(buffer, perf.message_size);
+      iterations += n;
+    }
+  } break;
+  default: {
+    while (iterations < total_iterations) {
+      co_await ep->worker_ptr()->tag_recv(buffer, perf.message_size,
+                                          k_test_tag);
+      iterations++;
+      print_report(perf);
+    }
+    break;
+  }
   }
 }
 
@@ -187,7 +210,10 @@ ucxpp::task<void> server(ucxpp::acceptor acceptor, perf_context const &perf) {
       co_await task;
     }
   }
-  print_report(true);
+  if (perf.test.first == test_category::stream) {
+    g_counter = perf.iterations;
+  }
+  print_report(perf, true);
 
   co_await ep->flush();
   co_await ep->close();
@@ -198,6 +224,7 @@ ucxpp::task<void> server(ucxpp::acceptor acceptor, perf_context const &perf) {
 void print_usage(char const *argv0) {
   ::fprintf(stderr,
             "Usage: %s [options] \n-c\tSpecify the core\n"
+            "-t\tSpecify test type (tag, stream)\n"
             "-o\tSpecifies concurrent requests (default: 1)\n"
             "-n\tSpecifies number of iterations (default: 1000000)\n"
             "-s\tSpecifies message size (default: 8)\n"
@@ -215,6 +242,15 @@ int main(int argc, char *argv[]) {
     if (args[i] == "-h") {
       print_usage(argv[0]);
       return 0;
+    } else if (args[i] == "-t") {
+      if (args[++i] == "tag") {
+        perf.test.first = test_category::tag;
+      } else if (args[i] == "stream") {
+        perf.test.first = test_category::stream;
+      } else {
+        ::fprintf(stderr, "Unknown test type: %s", args[i].c_str());
+        return 1;
+      }
     } else if (args[i] == "-c") {
       perf.core = std::stoi(args[++i]);
     } else if (args[i] == "-o") {
@@ -238,7 +274,11 @@ int main(int argc, char *argv[]) {
   }
   auto ctx = [&]() {
     auto builder = ucxpp::context::builder();
-    builder.enable_tag();
+    if (perf.test.first == test_category::stream) {
+      builder.enable_stream();
+    } else {
+      builder.enable_tag();
+    }
     if (perf.epoll) {
       builder.enable_wakeup();
     }
