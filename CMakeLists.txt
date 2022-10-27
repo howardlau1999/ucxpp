@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
 project(ucxpp)
 set(CMAKE_CXX_STANDARD 20)
 
-add_compile_options(-Wall -Wextra -pedantic -Werror)
-
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(Threads REQUIRED)
 find_package(ucx REQUIRED)
@@ -20,8 +18,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 else()
   option(UCXPP_BUILD_EXAMPLES "Build examples" OFF)
 endif()
-
-include_directories(include)
 
 set(UCXPP_SOURCE_FILES 
   src/awaitable.cc
@@ -41,6 +37,10 @@ list(APPEND
   -flto
   PRIVATE
   -fno-rtti
+  -Wall 
+  -Wextra 
+  -pedantic 
+  -Werror
 )
 list(APPEND
   UCXPP_LINK_OPTIONS
@@ -79,10 +79,10 @@ if (UCXPP_LINK_OPTIONS)
   target_link_options(ucxpp ${UCXPP_LINK_OPTIONS})
 endif ()
 target_link_libraries(ucxpp ${UCXPP_LINK_LIBRARIES})
+target_include_directories(ucxpp PUBLIC include)
 
 set(UCXPP_EXAMPLES helloworld perftest)
 if (UCXPP_BUILD_EXAMPLES)
-  include_directories(examples/include)
   set(UCXPP_EXAMPLES_LIB_SOURCE_FILES 
     examples/socket/channel.cc
     examples/socket/event_loop.cc
@@ -94,11 +94,13 @@ if (UCXPP_BUILD_EXAMPLES)
     examples/ep_transmission.cc
   )
   add_library(ucxpp_examples STATIC ${UCXPP_EXAMPLES_LIB_SOURCE_FILES})
+  target_include_directories(ucxpp_examples PUBLIC examples/include)
+  target_link_libraries(ucxpp_examples PUBLIC ucxpp)
   target_compile_options(ucxpp_examples ${UCXPP_COMPILE_OPTIONS})
   target_link_options(ucxpp_examples ${UCXPP_LINK_OPTIONS})
   foreach (EXAMPLE ${UCXPP_EXAMPLES})
     add_executable(${EXAMPLE} examples/${EXAMPLE}.cc)
-    target_link_libraries(${EXAMPLE} ucm ucxpp ucxpp_examples) 
+    target_link_libraries(${EXAMPLE} ucm ucxpp_examples) 
     target_compile_options(${EXAMPLE} ${UCXPP_COMPILE_OPTIONS})
     target_link_options(${EXAMPLE} ${UCXPP_LINK_OPTIONS})
   endforeach ()
